@@ -1,15 +1,14 @@
 import { useState } from "react";
 import { router } from "expo-router";
-import { Pressable, Switch, Text, View } from "react-native";
+import { Switch, Text, View } from "react-native";
 import {
   categories,
   postSchema,
   type Category,
-  type Page,
   type Subject,
 } from "@secondlook/contracts";
 import { useApp } from "../../lib/context";
-import { useResource } from "../../lib/resource";
+import { SubjectPicker } from "../../components/SubjectPicker";
 import {
   Screen,
   Heading,
@@ -24,9 +23,7 @@ export default function Write() {
 }
 function Compose() {
   const { api, colors } = useApp();
-  const [version, setVersion] = useState(0);
-  const objects = useResource<Page<Subject>>("/subjects?limit=50", version);
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState<Subject | null>(null);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [category, setCategory] = useState<Category>("RESTAURANT");
@@ -49,8 +46,7 @@ function Compose() {
         method: "POST",
         body: JSON.stringify({ name, category, city, address }),
       });
-      setSelected(subject.id);
-      setVersion((v) => v + 1);
+      setSelected(subject);
       setCreating(false);
     } catch (e) {
       setError((e as Error).message);
@@ -60,7 +56,7 @@ function Compose() {
   }
   async function submit() {
     const checked = postSchema.safeParse({
-      subjectId: selected,
+      subjectId: selected?.id ?? "",
       title,
       body,
       occurredOn,
@@ -164,33 +160,7 @@ function Compose() {
         </>
       ) : (
         <>
-          <Text style={{ color: colors.ink, fontSize: 12, marginBottom: 12 }}>
-            这次经历关于谁？
-          </Text>
-          {objects.error && <Message error={objects.error} />}
-          <View style={{ gap: 8, marginBottom: 18 }}>
-            {objects.data?.items.map((s) => (
-              <Pressable
-                key={s.id}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: selected === s.id }}
-                onPress={() => setSelected(s.id)}
-                style={({ pressed }) => ({
-                  backgroundColor:
-                    selected === s.id ? colors.soft : colors.surface,
-                  borderWidth: 1,
-                  borderColor: selected === s.id ? colors.accent : colors.line,
-                  borderRadius: 10,
-                  padding: 13,
-                  opacity: pressed ? 0.7 : 1,
-                })}
-              >
-                <Text style={{ color: colors.ink, fontSize: 12 }}>
-                  {selected === s.id ? "●" : "○"} {s.name} · {s.city}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+          <SubjectPicker selected={selected} onChange={setSelected} />
           <Button secondary onPress={() => setCreating(true)}>
             找不到？添加新对象
           </Button>

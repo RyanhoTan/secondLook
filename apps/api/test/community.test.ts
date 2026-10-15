@@ -42,25 +42,21 @@ beforeAll(async () => {
     },
   });
   adminToken = await issueSession(db, admin.id);
-  const author = await request(app)
-    .post("/api/v1/auth/register")
-    .send({
-      username: "author_test",
-      nickname: "不得公开的昵称",
-      password: "test-password-2026",
-      role: "ADMIN",
-    });
+  const author = await request(app).post("/api/v1/auth/register").send({
+    username: "author_test",
+    nickname: "不得公开的昵称",
+    password: "test-password-2026",
+    role: "ADMIN",
+  });
   expect(author.status).toBe(201);
   expect(author.body.user.role).toBe("USER");
   authorToken = author.body.token;
   authorId = author.body.user.id;
-  const reader = await request(app)
-    .post("/api/v1/auth/register")
-    .send({
-      username: "reader_test",
-      nickname: "读者",
-      password: "test-password-2026",
-    });
+  const reader = await request(app).post("/api/v1/auth/register").send({
+    username: "reader_test",
+    nickname: "读者",
+    password: "test-password-2026",
+  });
   readerToken = reader.body.token;
 }, 30000);
 afterAll(async () => {
@@ -298,7 +294,7 @@ describe("local community workflow and privacy boundaries", () => {
       await request(app).get("/api/v1/me/posts").set(auth(authorToken))
     ).body;
     expect(
-      own.find((p: { id: string }) => p.id === created.body.id).reason,
+      own.items.find((p: { id: string }) => p.id === created.body.id).reason,
     ).toBe("请补充具体经过");
   });
   it("revokes the session on logout", async () => {

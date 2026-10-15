@@ -1,6 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import type { Account, Notification, OwnPost } from "@secondlook/contracts";
+import type {
+  Account,
+  Notification,
+  OwnPost,
+  Page,
+} from "@secondlook/contracts";
+import { Pagination } from "../components/Pagination";
 import { useSession } from "../lib/session";
 import { useResource, date } from "../lib/resource";
 import { Feedback, PageHeading } from "../components/ui";
@@ -157,7 +163,8 @@ export function MyPosts() {
   return user ? <OwnList /> : <NeedLogin />;
 }
 function OwnList() {
-  const resource = useResource<OwnPost[]>("/me/posts");
+  const [page, setPage] = useState(1);
+  const resource = useResource<Page<OwnPost>>(`/me/posts?page=${page}`);
   const labels: Record<string, string> = {
     PENDING: "等待审核",
     PUBLISHED: "已公开",
@@ -168,9 +175,9 @@ function OwnList() {
       <PageHeading eyebrow="留下记录，也补充后来" title="我的记录" />
       {!resource.data ? (
         <Feedback error={resource.error} loading={resource.loading} />
-      ) : resource.data.length ? (
+      ) : resource.data.items.length ? (
         <div className="own-list">
-          {resource.data.map((p) => (
+          {resource.data.items.map((p) => (
             <article key={p.id}>
               <span className="eyebrow">
                 {p.subjectName} · {labels[p.status] ?? p.status}
@@ -200,7 +207,21 @@ function OwnList() {
           ))}
         </div>
       ) : (
-        <Feedback empty="你还没有留下记录。准备好后，分享一次具体的亲身经历。" />
+        <Feedback
+          empty={
+            resource.data.total
+              ? "这一页没有记录，请返回上一页。"
+              : "你还没有留下记录。准备好后，分享一次具体的亲身经历。"
+          }
+        />
+      )}
+      {resource.data && (
+        <Pagination
+          label="我的记录分页"
+          page={page}
+          total={resource.data.total}
+          onChange={setPage}
+        />
       )}
     </>
   );

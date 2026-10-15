@@ -12,6 +12,7 @@ import { useSession } from "../lib/session";
 import { EvidenceTag, Feedback, PageHeading, PostCard } from "../components/ui";
 import { RevisionHistory } from "../components/RevisionHistory";
 import { PublicMaterials } from "../components/Materials";
+import { Pagination } from "../components/Pagination";
 export function Detail() {
   const { id } = useParams();
   const [version, setVersion] = useState(0);
@@ -131,8 +132,14 @@ export function Detail() {
 }
 export function SubjectPage() {
   const { id } = useParams();
+  return <SubjectContent key={id} id={id!} />;
+}
+function SubjectContent({ id }: { id: string }) {
+  const [page, setPage] = useState(1);
   const subject = useResource<Subject>(`/subjects/${id}`);
-  const posts = useResource<Page<PublicPost>>(`/posts?subjectId=${id}`);
+  const posts = useResource<Page<PublicPost>>(
+    `/posts?subjectId=${id}&page=${page}`,
+  );
   if (!subject.data)
     return <Feedback error={subject.error} loading={subject.loading} />;
   return (
@@ -157,6 +164,14 @@ export function SubjectPage() {
           <Feedback empty="这个对象还没有公开经历。" />
         )}
       </div>
+      {posts.data && (
+        <Pagination
+          label="对象经历分页"
+          page={page}
+          total={posts.data.total}
+          onChange={setPage}
+        />
+      )}
     </>
   );
 }

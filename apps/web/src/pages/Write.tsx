@@ -5,11 +5,10 @@ import {
   categories,
   postSchema,
   type Subject,
-  type Page,
   type Category,
 } from "@secondlook/contracts";
 import { useSession } from "../lib/session";
-import { useResource } from "../lib/resource";
+import { SubjectPicker } from "../components/SubjectPicker";
 import { NeedLogin } from "./Account";
 import { PageHeading } from "../components/ui";
 export function Write() {
@@ -18,9 +17,7 @@ export function Write() {
 }
 function WriteForm() {
   const { api } = useSession();
-  const [version, setVersion] = useState(0);
-  const subjects = useResource<Page<Subject>>("/subjects?limit=50", version);
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState<Subject | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -35,8 +32,7 @@ function WriteForm() {
         method: "POST",
         body: JSON.stringify(data),
       });
-      setVersion((v) => v + 1);
-      setSelected(subject.id);
+      setSelected(subject);
       setCreating(false);
     } catch (e) {
       setError((e as Error).message);
@@ -48,7 +44,7 @@ function WriteForm() {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const data = {
-      subjectId: selected,
+      subjectId: selected?.id ?? "",
       title: form.get("title"),
       body: form.get("body"),
       occurredOn: form.get("occurredOn"),
@@ -103,11 +99,6 @@ function WriteForm() {
           {error}
         </p>
       )}
-      {subjects.error && (
-        <p role="alert" className="error">
-          {subjects.error}
-        </p>
-      )}
       {creating ? (
         <form className="form-surface" onSubmit={create}>
           <h2>添加一个具体对象</h2>
@@ -150,22 +141,7 @@ function WriteForm() {
         </form>
       ) : (
         <form className="form-surface" onSubmit={submit}>
-          <label>
-            这次经历关于谁？
-            <select
-              aria-label="选择对象"
-              required
-              value={selected}
-              onChange={(e) => setSelected(e.target.value)}
-            >
-              <option value="">选择公司、门店、景点或其他对象</option>
-              {subjects.data?.items.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} · {s.city}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SubjectPicker selected={selected} onChange={setSelected} />
           <button
             type="button"
             className="text-button add-subject"

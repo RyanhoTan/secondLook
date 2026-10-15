@@ -27,7 +27,9 @@ export function communityRoutes(db: Database) {
       req.query,
     );
     const where = {
-      ...(q ? { name: { contains: q } } : {}),
+      ...(q
+        ? { OR: [{ name: { contains: q } }, { address: { contains: q } }] }
+        : {}),
       ...(category ? { category } : {}),
       ...(city ? { city: { contains: city } } : {}),
     };
@@ -176,21 +178,32 @@ export function communityRoutes(db: Database) {
       res.status(204).end();
     },
   );
-  router.get("/me/posts", authenticate(db, true), async (_req, res) => {
-    const posts = await db.post.findMany({
-      where: { authorId: res.locals.user.id },
-      include: { subject: true },
-      orderBy: { createdAt: "desc" },
-    });
-    res.json(
-      posts.map((p) => ({
+  router.get("/me/posts", authenticate(db, true), async (req, res) => {
+    const { page, limit } = paginationSchema
+      .pick({ page: true, limit: true })
+      .parse(req.query);
+    const where = { authorId: res.locals.user.id };
+    const [posts, total] = await db.$transaction([
+      db.post.findMany({
+        where,
+        include: { subject: true },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      db.post.count({ where }),
+    ]);
+    res.json({
+      total,
+      page,
+      items: posts.map((p) => ({
         id: p.id,
         title: p.title,
         status: p.status,
         reason: p.reason,
         subjectName: p.subject.name,
       })),
-    );
+    });
   });
   router.get("/notifications", authenticate(db, true), async (_req, res) => {
     const notifications = await db.notification.findMany({

@@ -245,3 +245,10 @@ GitHub 公开仓库与私有仓库由你决定，许可证也需另选；本方�
 - `DELETE /materials/:id` 由上传者撤回；公开副本链接立即不可再读，公开材料标签重新评估，生成材料变化事件并通知关注者。原件仍受限保存，清理期限尚待政策确定。上传和审核失败会清理本次文件并回滚数据库，进程突然终止后的孤立文件核对留待维护模块补齐。
 - 公开材料通过后，基础标签可由“仅本人陈述”变为“已附材料”；仅审核材料不升级，上传数量不产生“独立佐证”。当前有独立佐证状态不会由材料数量逻辑覆盖，其完整判定与重评待贡献模块实现。材料与具体原文版本的绑定也需在该模块补齐。
 - App 使用 SDK 57 对应的 ImagePicker 和 Crypto，均通过 expo install 安装；仅选择照片，不启用拍摄/录音。参考 [ImagePicker](https://docs.expo.dev/versions/v57.0.0/sdk/imagepicker/)、[Crypto](https://docs.expo.dev/versions/v57.0.0/sdk/crypto/)、[Multer](https://expressjs.com/en/resources/middleware/multer.html)、[Sharp](https://sharp.pixelplumbing.com/api-input/)。手机选图、原生 multipart 与实际网络恢复仍须真机测试。
+
+## 17. 对象选择与分页
+
+- `GET /subjects` 的 q 匹配名称或门店地址，仍与 category/city 条件组合，按 createdAt/id 稳定排序并分页。发布选择器每页 12 个对象，主动搜索/按回车后查询；回车不会提交整篇经历。当前选择单独保存，翻页、无结果或创建新对象不会将它丢掉。
+- `GET /me/posts?page=1&limit=12` 现在返回 `Page<OwnPost>`，即 `{ items, total, page }`，不再返回裸数组。查询和总数都受当前登录者约束，使用同一事务；同时间记录按 id 继续排序。Web、App 和相关集成测试已一起迁移。
+- 两端对象详情与个人记录均有上一页/下一页和页数说明，空的后续页仍能返回上一页；对象改变时重置页数。不一次加载全部记录。未审内容仍排除在公开列表、总数与对象统计之外。
+- 该步骤不实现问题类型/发生时间筛选、别名及对象合并，仍属于 F14 的局部交付。原生分页、键盘与文字缩放须继续进行设备验收。

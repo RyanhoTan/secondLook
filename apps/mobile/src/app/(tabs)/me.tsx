@@ -2,7 +2,8 @@ import { SegmentedControl } from "../../components/SegmentedControl";
 import { useState } from "react";
 import { router } from "expo-router";
 import { Text, View } from "react-native";
-import type { OwnPost } from "@secondlook/contracts";
+import type { OwnPost, Page } from "@secondlook/contracts";
+import { Pagination } from "../../components/Pagination";
 import { useApp } from "../../lib/context";
 import { useResource } from "../../lib/resource";
 import { Screen, Heading, Message, Button } from "../../components/ui";
@@ -56,7 +57,8 @@ export default function Me() {
 }
 function OwnList() {
   const { colors } = useApp();
-  const resource = useResource<OwnPost[]>("/me/posts");
+  const [page, setPage] = useState(1);
+  const resource = useResource<Page<OwnPost>>(`/me/posts?page=${page}`);
   const labels: Record<string, string> = {
     PENDING: "等待审核",
     PUBLISHED: "已公开",
@@ -66,8 +68,8 @@ function OwnList() {
     <View style={{ marginBottom: 24 }}>
       {resource.error || resource.loading ? (
         <Message error={resource.error} loading={resource.loading} />
-      ) : resource.data?.length ? (
-        resource.data.map((p) => (
+      ) : resource.data?.items.length ? (
+        resource.data.items.map((p) => (
           <View
             key={p.id}
             style={{
@@ -123,7 +125,20 @@ function OwnList() {
           </View>
         ))
       ) : (
-        <Message empty="还没有发布过经历。" />
+        <Message
+          empty={
+            resource.data?.total
+              ? "这一页没有记录，请返回上一页。"
+              : "还没有发布过经历。"
+          }
+        />
+      )}
+      {resource.data && (
+        <Pagination
+          page={page}
+          total={resource.data.total}
+          onChange={setPage}
+        />
       )}
     </View>
   );

@@ -625,3 +625,115 @@ test("upload and redact materials with private-only review and withdrawal", asyn
     await adminContext.close();
   }
 });
+
+test("search past fifty objects and page personal and subject records without losing selection", async ({
+  page,
+}) => {
+  const username = `paging_${Date.now()}`,
+    password = "test-only-pagination-2026";
+  const account = await (
+    await page.request.post("/api/v1/auth/register", {
+      data: { username, nickname: "分页测试作者", password },
+    })
+  ).json();
+  const admin = await (
+    await page.request.post("/api/v1/auth/login", {
+      data: { username: "admin", password: "test-only-admin-2026" },
+    })
+  ).json();
+  const headers = { Authorization: `Bearer ${account.token}` };
+  for (let i = 0; i < 55; i++)
+    expect(
+      (
+        await page.request.post("/api/v1/subjects", {
+          headers,
+          data: {
+            name: `分页对象 ${i}`,
+            category: "OTHER",
+            city: "虚构市",
+            address: `虚构路 ${i} 号`,
+          },
+        })
+      ).ok(),
+    ).toBe(true);
+  for (let i = 0; i < 14; i++) {
+    const post = await (
+      await page.request.post("/api/v1/posts", {
+        headers,
+        data: {
+          subjectId: "demo-noodle",
+          title: `分页测试：记录 ${String(i).padStart(2, "0")}`,
+          body: "这是用于多页列表与对象搜索验证的虚构经历，不涉及任何真实个人和商家。",
+          occurredOn: "2026-01-01",
+          anonymous: true,
+          personalExperience: true,
+        },
+      })
+    ).json();
+    expect(
+      (
+        await page.request.post(
+          `/api/v1/admin/reviews/POST/${post.id}/decision`,
+          {
+            headers: { Authorization: `Bearer ${admin.token}` },
+            data: { action: "APPROVE", reason: "分页测试虚构记录" },
+          },
+        )
+      ).status(),
+    ).toBe(204);
+  }
+  await login(page, username, password);
+  await page.getByRole("link", { name: "记录一次经历", exact: true }).click();
+  await expect(
+    page.getByLabel("选择对象").locator('option[value="demo-noodle"]'),
+  ).toHaveCount(0);
+  await page.getByLabel("搜索对象名称或门店地址").fill("山间面馆");
+  await page.getByLabel("搜索对象名称或门店地址").press("Enter");
+  await page.getByLabel("选择对象").selectOption("demo-noodle");
+  await page.getByLabel("搜索对象名称或门店地址").fill("分页对象");
+  await page.getByRole("button", { name: "查找对象", exact: true }).click();
+  const pickerPaging = page.getByRole("navigation", { name: "对象选择分页" });
+  await pickerPaging
+    .getByRole("button", { name: "下一页", exact: true })
+    .click();
+  await expect(pickerPaging.getByRole("status")).toHaveText("第 2 / 5 页");
+  await expect(page.getByLabel("选择对象")).toHaveValue("demo-noodle");
+  await page.getByLabel("搜索对象名称或门店地址").fill("完全没有这个对象");
+  await page.getByRole("button", { name: "查找对象", exact: true }).click();
+  await expect(page.getByText(/没有找到对象，可以换个关键词/)).toBeVisible();
+  await expect(page.getByLabel("选择对象")).toHaveValue("demo-noodle");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "200%";
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "100%";
+  });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.getByRole("link", { name: "我的记录", exact: true }).click();
+  await expect(page.locator(".own-list article")).toHaveCount(12);
+  await page
+    .getByRole("navigation", { name: "我的记录分页" })
+    .getByRole("button", { name: "下一页" })
+    .click();
+  await expect(page.locator(".own-list article")).toHaveCount(2);
+  await expect(
+    page.getByRole("navigation", { name: "我的记录分页" }).getByRole("status"),
+  ).toHaveText("第 2 / 2 页");
+  await page
+    .getByRole("link", { name: "分页测试：记录 00", exact: true })
+    .click();
+  await page.locator(".detail-header .eyebrow").click();
+  await expect(page.locator(".post-card")).toHaveCount(12);
+  const objectPaging = page.getByRole("navigation", { name: "对象经历分页" });
+  await objectPaging.getByRole("button", { name: "下一页" }).click();
+  await expect(objectPaging.getByRole("status")).toContainText("第 2 /");
+  await expect(
+    page.getByRole("link", { name: /菜单标注与实际收费不一致/ }),
+  ).toBeVisible();
+});
