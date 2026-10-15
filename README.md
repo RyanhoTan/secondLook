@@ -59,7 +59,7 @@ iPhone 先用 Expo Go。按当前 Expo 官方说明，电脑 Expo CLI 与实体 
 | `npm run test:e2e`                  | 网页浏览器回归测试，启动独立 API 与数据库 |
 | `npm run db:migrate -- --name 描述` | 修改 schema 后创建本地迁移                |
 
-浏览器测试首次使用先运行 `npx playwright install chromium`。如果已有本地 Chrome，可以设置 `PLAYWRIGHT_CHANNEL=chrome` 后运行；例如 Linux/macOS：`PLAYWRIGHT_CHANNEL=chrome npm run test:e2e`。测试使用端口 3101 和 5174，不占用正常演示数据库。测试截图与失败 trace 保存在 `apps/web/test-results`，不提交到 Git。
+浏览器测试首次使用先运行 `npx playwright install chromium`。如果已有本地 Chrome，可以设置 `PLAYWRIGHT_CHANNEL=chrome` 后运行；例如 Linux/macOS：`PLAYWRIGHT_CHANNEL=chrome npm run test:e2e`。测试默认使用端口 3101 和 5174，不占用正常演示数据库。端口已占用时可用 `SECONDLOOK_E2E_API_PORT` / `SECONDLOOK_E2E_WEB_PORT` 指定其他端口。测试截图与失败 trace 保存在 `apps/web/test-results`，不提交到 Git。
 
 ## 工程结构与文档
 

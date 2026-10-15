@@ -8,10 +8,10 @@ const dir = mkdtempSync(join(tmpdir(), "secondlook-browser-"));
 const env = {
   ...process.env,
   DATABASE_URL: `file:${join(dir, "test.db")}`,
-  PORT: "3101",
+  PORT: String(Number(process.env.SECONDLOOK_E2E_API_PORT ?? 3101)),
   SEED_ADMIN_PASSWORD: "test-only-admin-2026",
   SEED_DEMO_PASSWORD: "test-only-demo-2026",
-  WEB_ORIGINS: "http://127.0.0.1:5174",
+  WEB_ORIGINS: `http://127.0.0.1:${Number(process.env.SECONDLOOK_E2E_WEB_PORT ?? 5174)}`,
 };
 const options = { cwd: resolve(root, "apps/api"), env, stdio: "inherit" };
 try {

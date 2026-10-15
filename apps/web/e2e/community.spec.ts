@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 async function chooseTheme(page: Page, label: string) {
   await page.getByRole("button", { name: /^外观：/ }).click();
   await page.getByRole("button", { name: label, exact: true }).click();
+  await expect(page.locator(".appearance-options")).toHaveCount(0);
 }
 async function login(page: Page, username: string, password: string) {
   await page.goto("/login");
@@ -194,7 +195,7 @@ test("publish, moderate, follow and track a subsequent update through the browse
     page.getByRole("heading", { name: "感谢你，多留一份依据。" }),
   ).toBeVisible();
   const adminContext = await browser.newContext({
-    baseURL: "http://127.0.0.1:5174",
+    baseURL: new URL(page.url()).origin,
   });
   const admin = await adminContext.newPage();
   await login(admin, "admin", "test-only-admin-2026");
@@ -215,7 +216,7 @@ test("publish, moderate, follow and track a subsequent update through the browse
     .getByRole("link", { name: "浏览器测试：一次具体的虚构经历" })
     .click();
   const readerContext = await browser.newContext({
-    baseURL: "http://127.0.0.1:5174",
+    baseURL: new URL(page.url()).origin,
   });
   const reader = await readerContext.newPage();
   await reader.goto("/login");
