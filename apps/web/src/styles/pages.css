@@ -1,0 +1,303 @@
+.page-heading {
+  margin: 21px 0 30px;
+}
+.page-heading h1 {
+  font-size: 2.125rem;
+  line-height: 1.35;
+  letter-spacing: -1px;
+  margin-top: 10px;
+}
+.page-heading p {
+  color: var(--muted);
+  font-size: 0.9375rem;
+  margin-top: 12px;
+  line-height: 1.9;
+  max-width: 650px;
+}
+.feedback,
+.loading {
+  padding: 50px 24px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.9;
+}
+.error {
+  color: #b54f3e;
+  font-size: 0.875rem;
+  line-height: 1.8;
+}
+.form-page {
+  max-width: 680px;
+  margin: 0 auto;
+}
+.auth-page {
+  max-width: 450px;
+  padding-top: 20px;
+}
+.form-surface {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 30px;
+  display: grid;
+  gap: 22px;
+}
+label {
+  display: grid;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+input:not([type="checkbox"]),
+select,
+textarea {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px 12px;
+  color: var(--ink);
+  font-weight: 400;
+  width: 100%;
+}
+textarea {
+  resize: vertical;
+  line-height: 1.8;
+}
+.search-bar input {
+  border: 0;
+  background: none;
+  padding: 0;
+}
+.search-bar .city-filter input {
+  width: 63px;
+}
+.form-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.text-button {
+  background: none;
+  color: var(--accent);
+  font-size: 0.875rem;
+  padding: 8px 0;
+  min-height: 44px;
+  justify-self: start;
+}
+.add-subject {
+  margin-top: -18px;
+}
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+.checkbox input {
+  margin-top: 3px;
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+}
+.checkbox small {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.small-note {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  line-height: 1.9;
+}
+.form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.auth-gate {
+  padding: 20px 0;
+}
+.back-link {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  min-height: 38px;
+}
+.detail-page {
+  max-width: 780px;
+  margin: auto;
+}
+.detail-header {
+  padding: 26px 0;
+  border-bottom: 1px solid var(--line);
+}
+.detail-header h1 {
+  font-size: 2rem;
+  letter-spacing: -0.8px;
+  line-height: 1.5;
+  margin: 18px 0;
+}
+.detail-meta {
+  display: flex;
+  gap: 18px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  margin-bottom: 16px;
+}
+.detail-body {
+  font-size: 1rem;
+  line-height: 2.2;
+  padding: 30px 0;
+}
+.detail-body p {
+  margin-bottom: 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.detail-follow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.detail-follow h3 {
+  font-size: 1rem;
+}
+.detail-follow p {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.timeline {
+  margin: 36px 0;
+}
+.timeline > h2 {
+  font-size: 1.25rem;
+  margin-bottom: 25px;
+  display: flex;
+  gap: 10px;
+}
+.timeline > h2 > span {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+.timeline article {
+  border-left: 1px solid var(--line);
+  padding: 0 0 30px 24px;
+  position: relative;
+}
+.timeline article > i {
+  position: absolute;
+  top: 5px;
+  left: -4px;
+  background: var(--accent);
+  border-radius: 50%;
+  width: 7px;
+  height: 7px;
+}
+.timeline small {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.timeline h3 {
+  font-size: 1rem;
+  margin: 8px 0;
+}
+.timeline p {
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.narrow-feed {
+  max-width: 800px;
+  display: grid;
+  gap: 15px;
+}
+.notification-list,
+.own-list,
+.review-list {
+  display: grid;
+  gap: 16px;
+  max-width: 800px;
+}
+.notification-list article,
+.own-list article,
+.review-item {
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 25px;
+  background: var(--surface);
+}
+.notification-list small {
+  font-size: 0.8125rem;
+  color: var(--accent);
+}
+.notification-list .read small {
+  color: var(--muted);
+}
+.notification-list h3,
+.own-list h3,
+.review-item h3 {
+  font-size: 1.125rem;
+  margin: 9px 0;
+}
+.notification-list p,
+.review-body {
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.review-body {
+  padding: 14px 0 22px;
+}
+.review-item form {
+  display: grid;
+  gap: 16px;
+}
+.update-form {
+  margin-top: 18px;
+}
+.update-form summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--accent);
+}
+.update-form form {
+  margin-top: 16px;
+  display: grid;
+  gap: 15px;
+}
+.success-page {
+  max-width: 550px;
+  padding-top: 60px;
+}
+.success-page > svg {
+  color: var(--accent);
+}
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  align-items: center;
+  margin-top: 24px;
+  font-size: 0.875rem;
+}
+.pagination button {
+  background: var(--accent-soft);
+  padding: 10px;
+  border-radius: 8px;
+}
