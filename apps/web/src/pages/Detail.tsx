@@ -128,7 +128,9 @@ export function SubjectPage() {
         {posts.error || posts.loading ? (
           <Feedback error={posts.error} loading={posts.loading} />
         ) : posts.data?.items.length ? (
-          posts.data.items.map((p) => <PostCard key={p.id} post={p} />)
+          posts.data.items.map((p, index) => (
+            <PostCard key={p.id} post={p} index={index} />
+          ))
         ) : (
           <Feedback empty="这个对象还没有公开经历。" />
         )}

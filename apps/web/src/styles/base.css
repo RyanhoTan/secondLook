@@ -1,43 +1,54 @@
 :root {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
-    "Microsoft YaHei", sans-serif;
+  font:
+    100%/1.6 -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
   font-synthesis: none;
-  --bg: #f5f5f7;
+  font-optical-sizing: auto;
+  --bg: #fafafa;
   --surface: #fff;
-  --sidebar: rgba(248, 248, 250, 0.86);
-  --ink: #1d1d1f;
-  --muted: #626568;
-  --line: #dadcde;
-  --accent: #315c49;
-  --accent-soft: #e7eee7;
-  --glass: rgba(250, 250, 252, 0.86);
-  --gray-tag: #eef0ec;
-  --gray-ink: #59645b;
+  --ink: #1c1c1e;
+  --muted: #68686d;
+  --faint: #8a8a8f;
+  --line: #e9e9ec;
+  --field: #f3f3f5;
+  --hover: #f6f6f8;
+  --accent: #1c1c1e;
+  --accent-soft: #ededf0;
+  --button-ink: #fff;
+  --glass: rgba(250, 250, 250, 0.82);
+  --shadow: 0 2px 6px #14142005, 0 18px 50px #14142005;
+  --gray-tag: #f1f1f4;
+  --gray-ink: #636366;
   --blue-tag: #eaf0fa;
   --blue-ink: #3b5e99;
   --teal-tag: #e3f2ee;
   --teal-ink: #226858;
   --amber-tag: #fbf0d8;
   --amber-ink: #8c5c18;
-  color: var(--ink);
   background: var(--bg);
+  color: var(--ink);
   color-scheme: light;
-  font-size: 100%;
-  line-height: 1.6;
 }
 :root[data-theme="dark"] {
-  --bg: #101112;
-  --surface: #1c1d1f;
-  --sidebar: rgba(20, 21, 23, 0.9);
+  --bg: #0d0d0e;
+  --surface: #19191b;
   --ink: #f5f5f7;
-  --muted: #b0b4b8;
-  --line: #404347;
-  --accent: #b4d1b9;
-  --accent-soft: #2b4032;
-  --glass: rgba(24, 25, 27, 0.9);
-  --gray-tag: #303a33;
-  --gray-ink: #c1ccc2;
+  --muted: #aaaab0;
+  --faint: #95959c;
+  --line: #303033;
+  --field: #242427;
+  --hover: #212124;
+  --accent: #f5f5f7;
+  --accent-soft: #2a2a2e;
+  --button-ink: #141416;
+  --glass: rgba(13, 13, 14, 0.84);
+  --shadow: 0 2px 6px #00000008, 0 18px 50px #00000015;
+  --gray-tag: #2c2c30;
+  --gray-ink: #c4c4cb;
   --blue-tag: #273647;
   --blue-ink: #b5ccef;
   --teal-tag: #254238;
@@ -61,42 +72,26 @@ textarea {
 button,
 a,
 input,
-textarea,
-select {
+select,
+textarea {
   -webkit-tap-highlight-color: transparent;
+}
+a {
+  color: inherit;
+  text-decoration: none;
 }
 button,
 a {
   touch-action: manipulation;
 }
 button {
+  color: inherit;
+  border: 0;
   cursor: pointer;
 }
 button:disabled {
-  cursor: wait;
-  opacity: 0.5;
-}
-a {
-  color: inherit;
-  text-decoration: none;
-}
-button {
-  color: inherit;
-}
-button:active,
-.button:active {
-  transform: scale(0.98);
-}
-button:focus-visible,
-a:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 4px;
-}
-input:focus,
-textarea:focus,
-select:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  opacity: 0.45;
+  cursor: default;
 }
 h1,
 h2,
@@ -109,9 +104,6 @@ h2,
 h3 {
   font-weight: 600;
 }
-button {
-  border: 0;
-}
 svg {
   flex-shrink: 0;
 }
@@ -119,36 +111,120 @@ input,
 textarea,
 select {
   min-width: 0;
+  color: var(--ink);
+}
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #0071e3;
+  outline-offset: 5px;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid #0071e3;
+  outline-offset: 3px;
+}
+button:active,
+.button:active {
+  transform: scale(0.97);
+  transition: transform 100ms ease-out;
 }
 ::selection {
-  background: #bdd3c1;
-  color: #17251b;
+  background: #d8e8fa;
+  color: #121820;
 }
-
-button,
 .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 550;
+  transition:
+    transform 100ms ease-out,
+    background-color 120ms ease;
+}
+.primary {
+  background: var(--accent);
+  color: var(--button-ink);
+}
+.secondary {
+  background: var(--field);
+  color: var(--ink);
+}
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
   min-height: 44px;
+  padding: 10px;
+  background: transparent;
+  border-radius: 50%;
+  color: var(--muted);
 }
-a:active {
-  opacity: 0.72;
+.icon-button:hover {
+  background: var(--field);
+  color: var(--ink);
 }
-input,
-textarea,
-select {
-  font-size: 1rem;
+.text-button {
+  min-height: 44px;
+  padding: 8px 0;
+  background: none;
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: left;
 }
-
+.text-button:hover {
+  text-decoration: underline;
+}
+.small-note {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.9;
+}
+.error {
+  color: #af3b32;
+  font-size: 0.875rem;
+  line-height: 1.8;
+}
+:root[data-theme="dark"] .error {
+  color: #ffa59d;
+}
+.section-kicker,
+.eyebrow {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  letter-spacing: 0.015em;
+  line-height: 1.6;
+}
 .skip-link {
   position: fixed;
+  z-index: 100;
   top: 12px;
   left: 12px;
-  z-index: 100;
+  padding: 12px 20px;
+  border-radius: 12px;
   background: var(--accent);
-  color: var(--surface);
-  padding: 12px 18px;
-  border-radius: 10px;
+  color: var(--button-ink);
   transform: translateY(-180%);
 }
 .skip-link:focus {
   transform: none;
+}
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: var(--field);
+  color: var(--muted);
+  font-size: 0.75rem;
 }

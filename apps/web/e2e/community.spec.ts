@@ -1,8 +1,13 @@
 import { test, expect, type Page } from "@playwright/test";
+async function chooseTheme(page: Page, label: string) {
+  await page.getByRole("button", { name: /^外观：/ }).click();
+  await page.getByRole("button", { name: label, exact: true }).click();
+}
 async function login(page: Page, username: string, password: string) {
   await page.goto("/login");
   await page.getByLabel("登录名", { exact: true }).fill(username);
   await page.getByLabel("密码", { exact: true }).fill(password);
+  await page.screenshot({ path: "test-results/login-redesign.png" });
   await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "发现经历", exact: true }),
@@ -21,6 +26,7 @@ test("search, category filters, object details and share routes", async ({
   ).toBeVisible();
   await page.getByRole("link", { name: /菜单标注与实际收费不一致/ }).click();
   await expect(page.getByRole("heading", { name: "后续与变化" })).toBeVisible();
+  await page.screenshot({ path: "test-results/detail-redesign.png" });
   await page.reload();
   await expect(
     page.getByRole("heading", {
@@ -40,11 +46,13 @@ test("search, category filters, object details and share routes", async ({
 test("light/dark/system themes persist and mobile layout does not overflow", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1440, height: 1040 });
   await page.goto("/");
-  await page.getByRole("button", { name: "主题：跟随系统，点击切换" }).click();
+  await expect(page.locator(".post-card")).toHaveCount(3);
+  await chooseTheme(page, "浅色模式");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.screenshot({ path: "test-results/discover-light.png" });
-  await page.getByRole("button", { name: "主题：浅色模式，点击切换" }).click();
+  await chooseTheme(page, "深色模式");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.screenshot({ path: "test-results/discover-dark.png" });
   await page.reload();
@@ -52,12 +60,12 @@ test("light/dark/system themes persist and mobile layout does not overflow", asy
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".mobile-nav")).toBeVisible();
   await page.screenshot({ path: "test-results/discover-mobile.png" });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
-  await page.getByRole("button", { name: "主题：深色模式，点击切换" }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
+  await chooseTheme(page, "跟随系统");
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 });
@@ -87,11 +95,11 @@ test("readable text, touch targets and larger text preserve the layout", async (
   await page.evaluate(() => {
     document.documentElement.style.fontSize = "200%";
   });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
   await page.screenshot({ path: "test-results/discover-large-text.png" });
 });
 test("keyboard focus and text contrast work in both themes", async ({
@@ -100,11 +108,8 @@ test("keyboard focus and text contrast work in both themes", async ({
   await page.goto("/");
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "跳到主要内容" })).toBeFocused();
-  for (const label of [
-    "主题：跟随系统，点击切换",
-    "主题：浅色模式，点击切换",
-  ]) {
-    await page.getByRole("button", { name: label }).click();
+  for (const label of ["浅色模式", "深色模式"]) {
+    await chooseTheme(page, label);
     const ratios = await page.evaluate(() => {
       function channels(color: string) {
         return (color.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
@@ -139,6 +144,35 @@ test("keyboard focus and text contrast work in both themes", async ({
     for (const ratio of ratios) expect(ratio).toBeGreaterThanOrEqual(4.5);
   }
 });
+test("new navigation and interruptible disclosures remain usable", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.getByRole("navigation", { name: "主导航" })).toBeVisible();
+  const guide = page.getByRole("button", { name: "如何看待这些记录" });
+  await guide.click();
+  await expect(
+    page.getByRole("heading", { name: "看依据，也看后续。" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "关闭阅读说明" }).click();
+  await guide.click();
+  await page.keyboard.press("Escape");
+  await expect(guide).toHaveAttribute("aria-expanded", "false");
+  await expect(guide).toBeFocused();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.getByRole("button", { name: "公司", exact: true }).click();
+  await page.getByRole("button", { name: "饭店", exact: true }).click();
+  await expect(page.locator(".post-card")).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: "饭店", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .getByRole("navigation", { name: "手机导航" })
+    .getByRole("link", { name: "我的", exact: true })
+    .click();
+  await expect(page.getByRole("heading", { name: "登录后继续" })).toBeVisible();
+});
 test("publish, moderate, follow and track a subsequent update through the browser", async ({
   browser,
   page,
@@ -146,6 +180,7 @@ test("publish, moderate, follow and track a subsequent update through the browse
   await login(page, "demo", "test-only-demo-2026");
   await page.getByRole("link", { name: "记录一次经历", exact: true }).click();
   await page.getByLabel("选择对象").selectOption("demo-noodle");
+  await page.screenshot({ path: "test-results/write-redesign.png" });
   await page.getByLabel("用一句话概括").fill("浏览器测试：一次具体的虚构经历");
   await page.getByLabel("发生日期").fill("2026-01-01");
   await page
