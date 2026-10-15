@@ -9,6 +9,11 @@ import type { Database } from "../db.js";
 import { authenticate } from "../auth.js";
 import { HttpError } from "../http.js";
 import {
+  publicEventText,
+  publicRevision,
+  revisionSelect,
+} from "../revisions.js";
+import {
   postInclude,
   publicPost,
   publicSubject,
@@ -95,29 +100,39 @@ export function communityRoutes(db: Database) {
     res.json({ items: items.map(publicPost), total, page });
   });
   router.get("/posts/:id", authenticate(db), async (req, res) => {
-    const post = await publishedPost(db, String(req.params.id));
-    const events = await db.timelineEvent.findMany({
-      where: { postId: post.id },
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    const payload = await db.$transaction(async (tx) => {
+      const post = await publishedPost(tx, String(req.params.id));
+      const events = await tx.timelineEvent.findMany({
+        where: { postId: post.id },
+        include: { revision: { select: { visible: true } } },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      });
+      const follow = res.locals.user
+        ? await tx.follow.findUnique({
+            where: {
+              userId_postId: { userId: res.locals.user.id, postId: post.id },
+            },
+          })
+        : null;
+      return {
+        ...publicPost(post),
+        history: (
+          await tx.postRevision.findMany({
+            where: { postId: post.id, status: "PUBLISHED" },
+            orderBy: { version: "desc" },
+            select: revisionSelect,
+          })
+        ).map(publicRevision),
+        following: !!follow,
+        timeline: events.map((e) => ({
+          id: e.id,
+          ...publicEventText(e),
+          kind: e.kind,
+          createdAt: e.createdAt.toISOString(),
+        })),
+      };
     });
-    const follow = res.locals.user
-      ? await db.follow.findUnique({
-          where: {
-            userId_postId: { userId: res.locals.user.id, postId: post.id },
-          },
-        })
-      : null;
-    res.json({
-      ...publicPost(post),
-      following: !!follow,
-      timeline: events.map((e) => ({
-        id: e.id,
-        title: e.title,
-        body: e.body,
-        kind: e.kind,
-        createdAt: e.createdAt.toISOString(),
-      })),
-    });
+    res.json(payload);
   });
   router.post("/posts", authenticate(db, true), async (req, res) => {
     const { personalExperience, ...data } = postSchema.parse(req.body);
@@ -179,16 +194,20 @@ export function communityRoutes(db: Database) {
   });
   router.get("/notifications", authenticate(db, true), async (_req, res) => {
     const notifications = await db.notification.findMany({
-      where: { userId: res.locals.user.id },
-      include: { event: true },
+      where: {
+        userId: res.locals.user.id,
+        event: { post: { status: "PUBLISHED" } },
+      },
+      include: {
+        event: { include: { revision: { select: { visible: true } } } },
+      },
       orderBy: { createdAt: "desc" },
       take: 100,
     });
     res.json(
       notifications.map((n) => ({
         id: n.id,
-        title: n.event.title,
-        body: n.event.body,
+        ...publicEventText(n.event),
         postId: n.event.postId,
         read: n.read,
         createdAt: n.createdAt.toISOString(),

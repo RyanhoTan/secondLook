@@ -9,6 +9,7 @@ import { Detail, SubjectPage } from "./pages/Detail";
 import { Login, MyPosts, Notifications } from "./pages/Account";
 import { Write } from "./pages/Write";
 import { Admin } from "./pages/Admin";
+import { Revision } from "./pages/Revision";
 import "./styles.css";
 function ScrollReset() {
   const { pathname } = useLocation();
@@ -26,6 +27,7 @@ createRoot(document.getElementById("root")!).render(
           <Route element={<Layout />}>
             <Route index element={<Discover />} />
             <Route path="posts/:id" element={<Detail />} />
+            <Route path="posts/:id/revise" element={<Revision />} />
             <Route path="subjects/:id" element={<SubjectPage />} />
             <Route path="login" element={<Login />} />
             <Route path="write" element={<Write />} />

@@ -70,7 +70,7 @@ try {
       create: subject,
     });
     const id = `demo-post-${index}`;
-    await db.post.upsert({
+    const post = await db.post.upsert({
       where: { id },
       update: {},
       create: {
@@ -90,6 +90,21 @@ try {
             kind: "PUBLISHED",
           },
         },
+      },
+    });
+    await db.postRevision.upsert({
+      where: { postId_version: { postId: id, version: 1 } },
+      update: {},
+      create: {
+        postId: id,
+        version: 1,
+        baseVersion: 1,
+        title: post.title,
+        body: post.body,
+        occurredOn: post.occurredOn,
+        changeReason: "首次公开",
+        status: "PUBLISHED",
+        publishedAt: post.publishedAt ?? post.createdAt,
       },
     });
   }

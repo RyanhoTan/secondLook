@@ -47,6 +47,19 @@ export const updateSchema = z.object({
   title: z.string().trim().min(2).max(80),
   body: z.string().trim().min(10).max(5000),
 });
+export const revisionSchema = postSchema
+  .pick({
+    title: true,
+    body: true,
+    occurredOn: true,
+  })
+  .extend({
+    baseVersion: z.number().int().min(1),
+    changeReason: z.string().trim().min(5).max(500),
+  });
+export const historyVisibilitySchema = z.object({
+  reason: z.string().trim().min(2).max(500),
+});
 export const decisionSchema = z.object({
   action: z.enum(["APPROVE", "REJECT"]),
   reason: z.string().trim().min(2).max(500),
@@ -78,6 +91,8 @@ export type PublicPost = {
   disputed: boolean;
   subject: Subject;
   following?: boolean;
+  currentVersion: number;
+  correction: { reason: string; publishedAt: string } | null;
 };
 export type TimelineItem = {
   id: string;
@@ -86,7 +101,40 @@ export type TimelineItem = {
   kind: string;
   createdAt: string;
 };
-export type PostDetail = PublicPost & { timeline: TimelineItem[] };
+export type PublicRevision = {
+  id: string;
+  version: number;
+  publishedAt: string;
+} & (
+  | {
+      visible: true;
+      title: string;
+      body: string;
+      occurredOn: string;
+      changeReason: string;
+    }
+  | { visible: false }
+);
+export type OwnRevision = {
+  id: string;
+  title: string;
+  body: string;
+  occurredOn: string;
+  changeReason: string;
+  status: string;
+  reviewReason: string | null;
+};
+export type RevisionEditor = {
+  post: Pick<
+    PublicPost,
+    "id" | "title" | "body" | "occurredOn" | "currentVersion"
+  >;
+  latestRevision: OwnRevision | null;
+};
+export type PostDetail = PublicPost & {
+  timeline: TimelineItem[];
+  history: PublicRevision[];
+};
 export type Page<T> = { items: T[]; total: number; page: number };
 export type Account = { id: string; nickname: string; role: "USER" | "ADMIN" };
 export type Notification = {
@@ -101,7 +149,15 @@ export type Review = {
   id: string;
   title: string;
   body: string;
-  kind: "POST" | "UPDATE";
+  kind: "POST" | "UPDATE" | "REVISION";
+  changeReason?: string;
+  occurredOn?: string;
+  previous?: {
+    title: string;
+    body: string;
+    occurredOn: string;
+    version: number;
+  };
   subjectName: string;
   createdAt: string;
 };

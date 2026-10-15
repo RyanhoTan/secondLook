@@ -86,6 +86,11 @@ export function PostCard({
             <ArrowUpRight size={21} />
           </h3>
           <p>{post.body}</p>
+          {post.correction && (
+            <small className="correction-preview">
+              作者已更正 · {post.correction.reason}
+            </small>
+          )}
         </Link>
         <div className="post-bottom">
           <span className="author">

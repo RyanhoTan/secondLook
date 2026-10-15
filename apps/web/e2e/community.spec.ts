@@ -271,3 +271,140 @@ test("publish, moderate, follow and track a subsequent update through the browse
   await adminContext.close();
   await readerContext.close();
 });
+
+test("review corrections without leaking pending text and retain safe version history", async ({
+  page,
+  browser,
+}) => {
+  const username = `correction_${Date.now()}`;
+  const password = "test-only-correction-2026";
+  const createdUser = await page.request.post("/api/v1/auth/register", {
+    data: { username, nickname: "更正测试作者", password },
+  });
+  const { token } = await createdUser.json();
+  const adminLogin = await page.request.post("/api/v1/auth/login", {
+    data: { username: "admin", password: "test-only-admin-2026" },
+  });
+  const { token: adminToken } = await adminLogin.json();
+  const createdPost = await page.request.post("/api/v1/posts", {
+    headers: { Authorization: `Bearer ${token}` },
+    data: {
+      subjectId: "demo-noodle",
+      title: "版本测试：原始的虚构经历",
+      body: "这是仅供版本测试使用的虚构原文，其中的发生日期需要后续核对更正。",
+      occurredOn: "2026-01-01",
+      anonymous: true,
+      personalExperience: true,
+    },
+  });
+  const { id } = await createdPost.json();
+  expect(
+    (
+      await page.request.post(`/api/v1/admin/reviews/POST/${id}/decision`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+        data: { action: "APPROVE", reason: "虚构初稿审核通过" },
+      })
+    ).status(),
+  ).toBe(204);
+  await login(page, username, password);
+  await page.getByRole("link", { name: "我的记录", exact: true }).click();
+  await page.getByRole("link", { name: "修改原文 / 查看审核" }).click();
+  await page
+    .getByLabel("标题", { exact: true })
+    .fill("版本测试：核对后的虚构经历");
+  await page.getByLabel("发生日期", { exact: true }).fill("2026-01-02");
+  await page
+    .getByLabel("经历正文")
+    .fill(
+      "这是更正后的虚构正文，已经重新核对发生时间和收费说明，保留具体经过。 ",
+    );
+  await page
+    .getByLabel("更正说明", { exact: true })
+    .fill("核对凭据后，修正日期和原文中的说明。");
+  await page.getByRole("button", { name: "提交修改审核" }).click();
+  await expect(page.getByRole("heading", { name: "修改已提交" })).toBeVisible();
+  await page.getByRole("link", { name: "返回公开记录" }).click();
+  await expect(
+    page.getByRole("heading", {
+      name: "版本测试：原始的虚构经历",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.getByLabel("重要更正")).toHaveCount(0);
+  const adminContext = await browser.newContext({
+    baseURL: new URL(page.url()).origin,
+  });
+  try {
+    const admin = await adminContext.newPage();
+    await login(admin, "admin", "test-only-admin-2026");
+    await admin.getByRole("link", { name: "内容审核" }).click();
+    const review = admin
+      .locator(".review-item")
+      .filter({ hasText: "版本测试：核对后的虚构经历" });
+    await review
+      .getByText("对照当前公开版本（第 1 版）", { exact: true })
+      .click();
+    await expect(
+      review.getByRole("heading", { name: "版本测试：原始的虚构经历" }),
+    ).toBeVisible();
+    await review.getByLabel("审核说明").fill("核对虚构更正，符合发布规则");
+    await review.getByRole("button", { name: "通过并公开" }).click();
+    await expect(review).toHaveCount(0);
+    await page.getByRole("link", { name: "发现经历", exact: true }).click();
+    const card = page
+      .locator(".post-card")
+      .filter({ hasText: "版本测试：核对后的虚构经历" });
+    await expect(card.locator(".correction-preview")).toContainText(
+      "核对凭据后",
+    );
+    await card
+      .getByRole("link", { name: /版本测试：核对后的虚构经历/ })
+      .click();
+    await expect(page.getByLabel("重要更正")).toContainText(
+      "作者已更正 · 第 2 版",
+    );
+    await page.locator(".revision-history > summary").click();
+    const first = page
+      .locator(".revision-history article")
+      .filter({ hasText: "第 1 版" });
+    await first.getByText("阅读此版本", { exact: true }).click();
+    await expect(first).toContainText("虚构原文");
+    for (const theme of ["浅色模式", "深色模式"]) {
+      await chooseTheme(page, theme);
+      await page.screenshot({
+        path: `test-results/correction-${theme === "浅色模式" ? "light" : "dark"}.png`,
+      });
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: "test-results/correction-mobile-large-text.png",
+    });
+    await admin.getByRole("link", { name: "发现经历", exact: true }).click();
+    await admin
+      .getByRole("link", { name: /版本测试：核对后的虚构经历/ })
+      .click();
+    await admin.locator(".revision-history > summary").click();
+    const old = admin
+      .locator(".revision-history article")
+      .filter({ hasText: "第 1 版" });
+    await old
+      .getByLabel("隐藏历史的处理理由")
+      .fill("虚构隐私处理：限制旧版本公开");
+    await old.getByRole("button", { name: "限制此历史版本公开" }).click();
+    await admin.locator(".revision-history > summary").click();
+    await expect(admin.locator(".revision-history")).toContainText(
+      "此版本已限制公开",
+    );
+  } finally {
+    await adminContext.close();
+  }
+});

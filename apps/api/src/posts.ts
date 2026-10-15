@@ -24,6 +24,12 @@ export function publicSubject(subject: SubjectRow) {
 export const postInclude = {
   author: { select: { nickname: true } },
   subject: { include: subjectInclude },
+  revisions: {
+    where: { status: "PUBLISHED" },
+    orderBy: { version: "desc" },
+    take: 1,
+    select: { changeReason: true, publishedAt: true, version: true },
+  },
 } as const;
 type PostRow = {
   id: string;
@@ -35,6 +41,12 @@ type PostRow = {
   disputed: boolean;
   createdAt: Date;
   publishedAt: Date | null;
+  currentVersion: number;
+  revisions: {
+    changeReason: string;
+    publishedAt: Date | null;
+    version: number | null;
+  }[];
   author: { nickname: string };
   subject: SubjectRow;
 };
@@ -50,9 +62,17 @@ export function publicPost(post: PostRow) {
     evidence: post.evidence as EvidenceLevel,
     disputed: post.disputed,
     subject: publicSubject(post.subject),
+    currentVersion: post.currentVersion,
+    correction:
+      post.currentVersion > 1 && post.revisions[0]?.publishedAt
+        ? {
+            reason: post.revisions[0].changeReason,
+            publishedAt: post.revisions[0].publishedAt.toISOString(),
+          }
+        : null,
   };
 }
-export async function publishedPost(db: Database, id: string) {
+export async function publishedPost(db: Pick<Database, "post">, id: string) {
   const post = await db.post.findFirst({
     where: { id, status: "PUBLISHED" },
     include: postInclude,
@@ -93,6 +113,20 @@ export async function reviewItem(
     });
     if (action === "REJECT") return;
     if (kind === "POST") {
+      const post = await tx.post.findUniqueOrThrow({ where: { id } });
+      await tx.postRevision.create({
+        data: {
+          postId: id,
+          version: 1,
+          baseVersion: 1,
+          title: post.title,
+          body: post.body,
+          occurredOn: post.occurredOn,
+          changeReason: "首次公开",
+          status: "PUBLISHED",
+          publishedAt: post.publishedAt,
+        },
+      });
       await tx.timelineEvent.create({
         data: {
           postId: id,

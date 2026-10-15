@@ -4,6 +4,7 @@ import { Pressable, Text, View } from "react-native";
 import type { PostDetail } from "@secondlook/contracts";
 import { useApp } from "../../lib/context";
 import { useResource } from "../../lib/resource";
+import { RevisionHistory } from "../../components/RevisionHistory";
 import {
   Screen,
   Heading,
@@ -59,6 +60,24 @@ export default function Detail() {
         description={`${post.authorName} · ${post.occurredOn} 发生 · ${post.subject.city}`}
       />
       <EvidenceTags post={post} />
+      {post.correction && (
+        <View
+          style={{
+            marginTop: 24,
+            padding: 20,
+            gap: 10,
+            backgroundColor: colors.soft,
+            borderRadius: 15,
+          }}
+        >
+          <Text style={{ color: colors.ink, fontSize: 16, fontWeight: "600" }}>
+            作者已更正 · 第 {post.currentVersion} 版
+          </Text>
+          <Text style={{ color: colors.ink, fontSize: 15, lineHeight: 27 }}>
+            {post.correction.reason}
+          </Text>
+        </View>
+      )}
       <Text
         style={{
           fontSize: 15,
@@ -112,6 +131,10 @@ export default function Detail() {
           </Text>
         </View>
       ))}
+      <RevisionHistory
+        history={post.history}
+        currentVersion={post.currentVersion}
+      />
       <Message empty="标签说明材料状态，不代表事实裁决。退款不自动等于原经历失实。" />
     </Screen>
   );

@@ -49,11 +49,33 @@ model Post {
   reason String?
   createdAt DateTime @default(now())
   publishedAt DateTime?
+  currentVersion Int @default(1)
+  revisions PostRevision[]
   updates ProgressUpdate[]
   follows Follow[]
   events TimelineEvent[]
   @@index([status,publishedAt])
   @@index([subjectId,status])
+}
+model PostRevision {
+  id String @id @default(cuid())
+  postId String
+  post Post @relation(fields:[postId],references:[id])
+  version Int?
+  baseVersion Int
+  pendingKey String? @unique
+  title String
+  body String
+  occurredOn String
+  changeReason String
+  status String @default("PENDING")
+  reviewReason String?
+  visible Boolean @default(true)
+  createdAt DateTime @default(now())
+  publishedAt DateTime?
+  events TimelineEvent[]
+  @@unique([postId,version])
+  @@index([postId,status])
 }
 model ProgressUpdate {
   id String @id @default(cuid())
@@ -72,6 +94,8 @@ model TimelineEvent {
   title String
   body String
   kind String
+  revisionId String?
+  revision PostRevision? @relation(fields:[revisionId],references:[id])
   createdAt DateTime @default(now())
   notifications Notification[]
 }

@@ -183,7 +183,14 @@ function OwnList() {
                 )}
               </h3>
               {p.reason && <p className="small-note">审核说明：{p.reason}</p>}
-              {p.status === "PUBLISHED" && <UpdateForm postId={p.id} />}
+              {p.status === "PUBLISHED" && (
+                <>
+                  <Link className="back-link" to={`/posts/${p.id}/revise`}>
+                    修改原文 / 查看审核
+                  </Link>
+                  <UpdateForm postId={p.id} />
+                </>
+              )}
             </article>
           ))}
         </div>

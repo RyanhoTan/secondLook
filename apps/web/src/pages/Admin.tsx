@@ -70,9 +70,28 @@ function ReviewItem({ item, onDone }: { item: Review; onDone: () => void }) {
   return (
     <article className="review-item">
       <span className="eyebrow">
-        {item.kind === "POST" ? "新亲历" : "后续更新"} · {item.subjectName}
+        {
+          { POST: "新亲历", UPDATE: "后续更新", REVISION: "原文修订" }[
+            item.kind
+          ]
+        }{" "}
+        · {item.subjectName}
       </span>
       <h3>{item.title}</h3>
+      {item.previous && (
+        <details className="review-previous">
+          <summary>对照当前公开版本（第 {item.previous.version} 版）</summary>
+          <h4>{item.previous.title}</h4>
+          <p>{item.previous.occurredOn}发生</p>
+          <p className="revision-text">{item.previous.body}</p>
+        </details>
+      )}
+      {item.changeReason && (
+        <p className="revision-text">更正说明：{item.changeReason}</p>
+      )}
+      {item.occurredOn && (
+        <p className="small-note">修改后的发生日期：{item.occurredOn}</p>
+      )}
       <p className="review-body">{item.body}</p>
       <form onSubmit={submit}>
         <label>

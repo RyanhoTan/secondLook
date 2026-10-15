@@ -6,6 +6,7 @@ import type { Database } from "./db.js";
 import { authRoutes } from "./routes/auth.js";
 import { communityRoutes } from "./routes/community.js";
 import { adminRoutes } from "./routes/admin.js";
+import { revisionRoutes } from "./routes/revisions.js";
 import { errorHandler } from "./http.js";
 export function createApp(db: Database) {
   const app = express();
@@ -29,7 +30,13 @@ export function createApp(db: Database) {
       legacyHeaders: false,
     }),
   );
-  app.use("/api/v1", authRoutes(db), communityRoutes(db), adminRoutes(db));
+  app.use(
+    "/api/v1",
+    authRoutes(db),
+    communityRoutes(db),
+    revisionRoutes(db),
+    adminRoutes(db),
+  );
   app.use((_req, res) =>
     res.status(404).json({ code: "NOT_FOUND", message: "接口不存在" }),
   );

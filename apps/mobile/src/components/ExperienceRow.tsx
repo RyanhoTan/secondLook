@@ -114,6 +114,19 @@ export function PostCard({ post }: { post: PublicPost }) {
         >
           {post.body}
         </Text>
+        {post.correction && (
+          <Text
+            style={{
+              marginTop: 12,
+              color: colors.muted,
+              fontSize: 13,
+              lineHeight: 23,
+            }}
+            numberOfLines={2}
+          >
+            作者已更正 · {post.correction.reason}
+          </Text>
+        )}
         <View
           style={{
             marginTop: 20,

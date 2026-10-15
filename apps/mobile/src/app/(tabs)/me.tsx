@@ -104,6 +104,12 @@ function OwnList() {
                 >
                   补充后续进展
                 </Button>
+                <Button
+                  secondary
+                  onPress={() => router.push(`/revise/${p.id}`)}
+                >
+                  修改原文 / 查看审核
+                </Button>
               </>
             )}
           </View>

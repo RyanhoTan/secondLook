@@ -10,6 +10,7 @@ import type {
 import { useResource, date } from "../lib/resource";
 import { useSession } from "../lib/session";
 import { EvidenceTag, Feedback, PageHeading, PostCard } from "../components/ui";
+import { RevisionHistory } from "../components/RevisionHistory";
 export function Detail() {
   const { id } = useParams();
   const [version, setVersion] = useState(0);
@@ -55,6 +56,13 @@ export function Detail() {
         </div>
         <EvidenceTag post={data} />
       </header>
+      {data.correction && (
+        <aside className="correction-note" aria-label="重要更正">
+          <strong>作者已更正 · 第 {data.currentVersion} 版</strong>
+          <p>{data.correction.reason}</p>
+          <small>{date(data.correction.publishedAt)}公开</small>
+        </aside>
+      )}
       <div className="detail-body">
         {data.body.split("\n").map((p, i) => (
           <p key={i}>{p}</p>
@@ -94,13 +102,22 @@ export function Detail() {
             <i />
             <small>
               {date(item.createdAt)} ·{" "}
-              {item.kind === "AUTHOR_UPDATE" ? "作者补充" : "记录公开"}
+              {item.kind === "AUTHOR_UPDATE"
+                ? "作者补充"
+                : item.kind === "CORRECTION"
+                  ? "原文更正"
+                  : "记录公开"}
             </small>
             <h3>{item.title}</h3>
             <p>{item.body}</p>
           </article>
         ))}
       </section>
+      <RevisionHistory
+        history={data.history}
+        currentVersion={data.currentVersion}
+        onChange={() => setVersion((v) => v + 1)}
+      />
       <p className="small-note">
         标签说明当前材料状态，不代表事实裁决。退款或问题解决，不自动代表原经历失实。
       </p>
