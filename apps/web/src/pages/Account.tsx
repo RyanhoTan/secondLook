@@ -183,6 +183,11 @@ function OwnList() {
                 )}
               </h3>
               {p.reason && <p className="small-note">审核说明：{p.reason}</p>}
+              {(p.status === "PENDING" || p.status === "PUBLISHED") && (
+                <Link className="back-link" to={`/posts/${p.id}/materials`}>
+                  添加 / 管理图片材料
+                </Link>
+              )}
               {p.status === "PUBLISHED" && (
                 <>
                   <Link className="back-link" to={`/posts/${p.id}/revise`}>

@@ -7,8 +7,10 @@ import { authRoutes } from "./routes/auth.js";
 import { communityRoutes } from "./routes/community.js";
 import { adminRoutes } from "./routes/admin.js";
 import { revisionRoutes } from "./routes/revisions.js";
+import { materialRoutes } from "./routes/materials.js";
+import { MaterialFiles } from "./material-files.js";
 import { errorHandler } from "./http.js";
-export function createApp(db: Database) {
+export function createApp(db: Database, options: { uploadRoot?: string } = {}) {
   const app = express();
   app.disable("x-powered-by");
   app.use(helmet());
@@ -35,6 +37,7 @@ export function createApp(db: Database) {
     authRoutes(db),
     communityRoutes(db),
     revisionRoutes(db),
+    materialRoutes(db, new MaterialFiles(options.uploadRoot)),
     adminRoutes(db),
   );
   app.use((_req, res) =>

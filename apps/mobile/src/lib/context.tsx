@@ -93,6 +93,12 @@ function useAppState() {
   const dark = mode === "dark" || (mode === "system" && system === "dark");
   return {
     api,
+    imageSource: (path: string) => ({
+      uri: `${base}${path}`,
+      headers: session
+        ? { Authorization: `Bearer ${session.token}` }
+        : undefined,
+    }),
     user: session?.user ?? null,
     login,
     logout,

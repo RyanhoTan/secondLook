@@ -15,6 +15,7 @@ model User {
   posts Post[]
   follows Follow[]
   notifications Notification[]
+  materials Material[]
 }
 model Session {
   id String @id @default(cuid())
@@ -54,6 +55,7 @@ model Post {
   updates ProgressUpdate[]
   follows Follow[]
   events TimelineEvent[]
+  materials Material[]
   @@index([status,publishedAt])
   @@index([subjectId,status])
 }
@@ -86,6 +88,30 @@ model ProgressUpdate {
   status String @default("PENDING")
   reason String?
   createdAt DateTime @default(now())
+}
+model Material {
+  id String @id @default(cuid())
+  postId String
+  post Post @relation(fields:[postId],references:[id])
+  uploaderId String
+  uploader User @relation(fields:[uploaderId],references:[id])
+  clientKey String
+  source String
+  visibility String
+  status String @default("PENDING")
+  originalKey String
+  previewKey String
+  publicKey String?
+  digest String
+  mime String
+  width Int
+  height Int
+  size Int
+  reason String?
+  createdAt DateTime @default(now())
+  reviewedAt DateTime?
+  @@unique([uploaderId,clientKey])
+  @@index([postId,status])
 }
 model TimelineEvent {
   id String @id @default(cuid())

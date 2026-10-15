@@ -93,6 +93,14 @@ function OwnList() {
                 审核说明：{p.reason}
               </Text>
             )}
+            {(p.status === "PENDING" || p.status === "PUBLISHED") && (
+              <Button
+                secondary
+                onPress={() => router.push(`/materials/${p.id}`)}
+              >
+                添加 / 管理图片材料
+              </Button>
+            )}
             {p.status === "PUBLISHED" && (
               <>
                 <Button secondary onPress={() => router.push(`/posts/${p.id}`)}>

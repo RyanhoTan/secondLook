@@ -10,19 +10,29 @@ export class HttpError extends Error {
 }
 export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   if (error instanceof ZodError) {
-    res
-      .status(400)
-      .json({
-        code: "VALIDATION_ERROR",
-        message: error.issues[0]?.message ?? "输入有误",
-        fieldErrors: error.flatten().fieldErrors,
-      });
+    res.status(400).json({
+      code: "VALIDATION_ERROR",
+      message: error.issues[0]?.message ?? "输入有误",
+      fieldErrors: error.flatten().fieldErrors,
+    });
     return;
   }
   if (error instanceof HttpError) {
     res
       .status(error.status)
       .json({ code: `HTTP_${error.status}`, message: error.message });
+    return;
+  }
+  if (error?.name === "MulterError") {
+    res
+      .status(error.code === "LIMIT_FILE_SIZE" ? 413 : 400)
+      .json({
+        code: "UPLOAD_LIMIT",
+        message:
+          error.code === "LIMIT_FILE_SIZE"
+            ? "图片不能超过 10MB"
+            : "每次仅可上传一张图片，且必须填写规定字段",
+      });
     return;
   }
   if (error?.code === "P2002") {

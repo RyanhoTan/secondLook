@@ -40,6 +40,7 @@ function Compose() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+  const [postId, setPostId] = useState("");
   async function create() {
     setBusy(true);
     setError("");
@@ -73,10 +74,11 @@ function Compose() {
     setBusy(true);
     setError("");
     try {
-      await api("/posts", {
+      const post = await api<{ id: string }>("/posts", {
         method: "POST",
         body: JSON.stringify(checked.data),
       });
+      setPostId(post.id);
       setDone(true);
     } catch (e) {
       setError((e as Error).message);
@@ -91,6 +93,11 @@ function Compose() {
           title="感谢你，多留一份依据。"
           description="投稿正在等待审核。通过后才会公开，可以在“我的记录”查看状态。"
         />
+        <View style={{ marginBottom: 16 }}>
+          <Button secondary onPress={() => router.push(`/materials/${postId}`)}>
+            添加图片材料（可选）
+          </Button>
+        </View>
         <Button
           onPress={() => {
             setDone(false);

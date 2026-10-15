@@ -5,6 +5,7 @@ import type { PostDetail } from "@secondlook/contracts";
 import { useApp } from "../../lib/context";
 import { useResource } from "../../lib/resource";
 import { RevisionHistory } from "../../components/RevisionHistory";
+import { PublicMaterials } from "../../components/Materials";
 import {
   Screen,
   Heading,
@@ -88,6 +89,7 @@ export default function Detail() {
       >
         {post.body}
       </Text>
+      <PublicMaterials postId={post.id} />
       <View
         style={{
           padding: 20,

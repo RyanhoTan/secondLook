@@ -131,7 +131,7 @@ export async function reviewItem(
         data: {
           postId: id,
           title: "亲历记录公开",
-          body: "仅本人陈述，可持续补充后续进展。",
+          body: "亲历已完成发布规则检查，可持续补充材料与后续进展。",
           kind: "PUBLISHED",
         },
       });

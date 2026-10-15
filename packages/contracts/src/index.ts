@@ -60,6 +60,53 @@ export const revisionSchema = postSchema
 export const historyVisibilitySchema = z.object({
   reason: z.string().trim().min(2).max(500),
 });
+export const materialLimits = {
+  maxBytes: 10 * 1024 * 1024,
+  maxPerPost: 6,
+  maxPixels: 20000000,
+} as const;
+export const materialSchema = z.object({
+  source: z.string().trim().min(5).max(500),
+  visibility: z.enum(["PUBLIC", "REVIEW_ONLY"]),
+  clientKey: z.uuid(),
+});
+export const redactionSchema = z
+  .object({
+    x: z.number().min(0).max(1),
+    y: z.number().min(0).max(1),
+    width: z.number().positive().max(1),
+    height: z.number().positive().max(1),
+  })
+  .refine((r) => r.x + r.width <= 1 && r.y + r.height <= 1, "遮挡范围超出图片");
+export const materialReviewSchema = z
+  .object({
+    action: z.enum(["APPROVE", "REJECT"]),
+    reason: z.string().trim().min(2).max(500),
+    privacyChecked: z.boolean(),
+    redactions: z.array(redactionSchema).max(30),
+  })
+  .refine(
+    (v) => v.action === "REJECT" || v.privacyChecked,
+    "请确认已检查图片和来源说明中的隐私信息",
+  );
+export type Redaction = z.infer<typeof redactionSchema>;
+export type PublicMaterial = {
+  id: string;
+  source: string;
+  width: number;
+  height: number;
+  createdAt: string;
+};
+export type OwnMaterial = PublicMaterial & {
+  visibility: "PUBLIC" | "REVIEW_ONLY";
+  status: string;
+  reason: string | null;
+};
+export type MaterialReview = OwnMaterial & {
+  postId: string;
+  postTitle: string;
+  subjectName: string;
+};
 export const decisionSchema = z.object({
   action: z.enum(["APPROVE", "REJECT"]),
   reason: z.string().trim().min(2).max(500),

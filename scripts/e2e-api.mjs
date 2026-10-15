@@ -8,6 +8,7 @@ const dir = mkdtempSync(join(tmpdir(), "secondlook-browser-"));
 const env = {
   ...process.env,
   DATABASE_URL: `file:${join(dir, "test.db")}`,
+  UPLOAD_DIR: join(dir, "uploads"),
   PORT: String(Number(process.env.SECONDLOOK_E2E_API_PORT ?? 3101)),
   SEED_ADMIN_PASSWORD: "test-only-admin-2026",
   SEED_DEMO_PASSWORD: "test-only-demo-2026",

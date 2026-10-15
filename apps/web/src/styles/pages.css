@@ -422,3 +422,78 @@ textarea {
   line-height: 1.8;
   overflow-wrap: anywhere;
 }
+.public-materials,
+.material-reviews {
+  margin: 32px 0;
+}
+.public-materials h2,
+.material-reviews > h2 {
+  font-size: 1.25rem;
+  margin-bottom: 16px;
+}
+.public-materials figure {
+  margin: 24px 0;
+}
+.material-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+.public-materials figcaption {
+  font-size: 0.9375rem;
+  line-height: 1.9;
+  margin-top: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.material-own-list {
+  margin: 24px 0;
+  display: grid;
+  gap: 20px;
+}
+.material-own-list article {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 24px;
+}
+.material-own-list h2 {
+  font-size: 1rem;
+}
+.material-own-list summary {
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+}
+.material-own-list .button {
+  margin-top: 16px;
+}
+.redaction-editor {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.redaction-canvas {
+  position: relative;
+  touch-action: none;
+  user-select: none;
+  cursor: crosshair;
+}
+.redaction-canvas img {
+  pointer-events: none;
+  border-radius: 0;
+}
+.redaction-mask {
+  position: absolute;
+  background: #111;
+  pointer-events: none;
+}
+.redaction-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.material-review-item .checkbox {
+  display: flex;
+  align-items: flex-start;
+  line-height: 1.8;
+}

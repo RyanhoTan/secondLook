@@ -11,6 +11,7 @@ import { useResource, date } from "../lib/resource";
 import { useSession } from "../lib/session";
 import { EvidenceTag, Feedback, PageHeading, PostCard } from "../components/ui";
 import { RevisionHistory } from "../components/RevisionHistory";
+import { PublicMaterials } from "../components/Materials";
 export function Detail() {
   const { id } = useParams();
   const [version, setVersion] = useState(0);
@@ -68,6 +69,7 @@ export function Detail() {
           <p key={i}>{p}</p>
         ))}
       </div>
+      <PublicMaterials postId={data.id} />
       <div className="detail-follow">
         <div>
           <h3>故事还在继续</h3>
@@ -106,7 +108,10 @@ export function Detail() {
                 ? "作者补充"
                 : item.kind === "CORRECTION"
                   ? "原文更正"
-                  : "记录公开"}
+                  : item.kind === "MATERIAL_APPROVED" ||
+                      item.kind === "MATERIAL_WITHDRAWAL"
+                    ? "材料变化"
+                    : "记录公开"}
             </small>
             <h3>{item.title}</h3>
             <p>{item.body}</p>

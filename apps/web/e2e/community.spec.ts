@@ -408,3 +408,220 @@ test("review corrections without leaking pending text and retain safe version hi
     await adminContext.close();
   }
 });
+
+test("upload and redact materials with private-only review and withdrawal", async ({
+  page,
+  browser,
+}) => {
+  const loginResponse = await page.request.post("/api/v1/auth/login", {
+    data: { username: "demo", password: "test-only-demo-2026" },
+  });
+  const { token } = await loginResponse.json();
+  const adminLogin = await page.request.post("/api/v1/auth/login", {
+    data: { username: "admin", password: "test-only-admin-2026" },
+  });
+  const { token: adminToken } = await adminLogin.json();
+  const created = await page.request.post("/api/v1/posts", {
+    headers: { Authorization: `Bearer ${token}` },
+    data: {
+      subjectId: "demo-noodle",
+      title: "材料测试：只使用虚构的截图",
+      body: "这是用于材料上传、公开副本脱敏、仅供审核与撤回流程的虚构亲历，不涉及真实个人信息。",
+      occurredOn: "2026-01-01",
+      anonymous: true,
+      personalExperience: true,
+    },
+  });
+  const { id } = await created.json();
+  expect(
+    (
+      await page.request.post(`/api/v1/admin/reviews/POST/${id}/decision`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+        data: { action: "APPROVE", reason: "虚构图片流程测试" },
+      })
+    ).status(),
+  ).toBe(204);
+  await login(page, "demo", "test-only-demo-2026");
+  const dataUrl = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 240;
+    canvas.height = 120;
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#fafafa";
+    ctx.fillRect(0, 0, 240, 120);
+    ctx.fillStyle = "#222";
+    ctx.font = "18px sans-serif";
+    ctx.fillText("FICTIONAL MATERIAL", 20, 60);
+    return canvas.toDataURL("image/png");
+  });
+  const buffer = Buffer.from(dataUrl.split(",")[1], "base64");
+  await page.getByRole("link", { name: "我的记录", exact: true }).click();
+  await page
+    .locator(".own-list article")
+    .filter({ hasText: "材料测试：只使用虚构的截图" })
+    .getByRole("link", { name: "添加 / 管理图片材料", exact: true })
+    .click();
+  await page
+    .getByLabel("选择图片", { exact: true })
+    .setInputFiles({ name: "fictional.png", mimeType: "image/png", buffer });
+  await page
+    .getByLabel("来源与关联说明")
+    .fill("公开材料来源：虚构截图，用于测试收费陈述。");
+  await page.getByRole("button", { name: "上传材料", exact: true }).click();
+  await expect(
+    page.getByText("材料已上传，审核前不会公开。可继续添加其他材料。", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    (await page.request.get(`/api/v1/posts/${id}/materials`)).json(),
+  ).resolves.toEqual([]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "200%";
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "100%";
+  });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const adminContext = await browser.newContext({
+    baseURL: new URL(page.url()).origin,
+  });
+  try {
+    const admin = await adminContext.newPage();
+    await login(admin, "admin", "test-only-admin-2026");
+    await admin.getByRole("link", { name: "内容审核" }).click();
+    const material = admin
+      .locator(".material-review-item")
+      .filter({ hasText: "材料测试：只使用虚构的截图" });
+    await expect(material.locator("img")).toBeVisible();
+    await admin.setViewportSize({ width: 390, height: 844 });
+    await admin.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    expect(
+      await admin.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await admin.evaluate(() => {
+      document.documentElement.style.fontSize = "100%";
+    });
+    await admin.setViewportSize({ width: 1280, height: 720 });
+    await material.locator("img").scrollIntoViewIfNeeded();
+    const box = (await material.locator("img").boundingBox())!;
+    await admin.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.2);
+    await admin.mouse.down();
+    await admin.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.8, {
+      steps: 4,
+    });
+    await expect(material.locator(".redaction-mask")).toHaveCount(1);
+    await admin.mouse.up();
+    await expect(
+      material.getByRole("button", { name: "移除遮挡 1" }),
+    ).toBeVisible();
+    await material.getByLabel("左侧位置 %").fill("5");
+    await material
+      .getByRole("button", { name: "添加遮挡", exact: true })
+      .click();
+    await material.getByRole("button", { name: "移除遮挡 2" }).click();
+    await admin.evaluate(() => window.scrollTo(0, 0));
+    await admin.screenshot({
+      path: "test-results/material-redaction.png",
+      fullPage: true,
+    });
+    await material
+      .getByLabel("材料审核说明", { exact: true })
+      .fill("虚构材料相关，已完整遮挡测试区域。");
+    await material
+      .getByLabel("已检查图片、来源说明的隐私与相关性；公开副本遮挡范围完整。")
+      .check();
+    await material
+      .getByRole("button", { name: "通过并公开副本", exact: true })
+      .click();
+    await expect(material).toHaveCount(0);
+    await page
+      .getByLabel("选择图片", { exact: true })
+      .setInputFiles({ name: "private.png", mimeType: "image/png", buffer });
+    await page
+      .getByLabel("来源与关联说明")
+      .fill("仅审核来源：这段说明不应出现在公开页面。");
+    await page.getByLabel("材料可见范围").selectOption("REVIEW_ONLY");
+    await page.getByRole("button", { name: "上传材料", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "等待审核 · 仅供审核" }),
+    ).toBeVisible();
+    await admin.getByRole("link", { name: "发现经历", exact: true }).click();
+    await admin.getByRole("link", { name: "内容审核" }).click();
+    const privateItem = admin
+      .locator(".material-review-item")
+      .filter({ hasText: "仅审核来源" });
+    await privateItem
+      .getByLabel("材料审核说明", { exact: true })
+      .fill("仅供审核的虚构材料，保持私密。");
+    await privateItem
+      .getByLabel("已检查图片、来源说明的隐私与相关性；公开副本遮挡范围完整。")
+      .check();
+    await privateItem
+      .getByRole("button", { name: "通过，仅供审核", exact: true })
+      .click();
+    await expect(privateItem).toHaveCount(0);
+    await page.getByRole("link", { name: "返回我的记录", exact: true }).click();
+    await page
+      .getByRole("link", { name: "材料测试：只使用虚构的截图", exact: true })
+      .click();
+    await expect(page.locator(".detail-header .tag")).toHaveText("已附材料");
+    await expect(page.getByLabel("公开材料").locator("img")).toBeVisible();
+    await expect(page.getByLabel("公开材料")).not.toContainText("仅审核来源");
+    for (const theme of ["浅色模式", "深色模式"]) {
+      await chooseTheme(page, theme);
+      await page.screenshot({
+        path: `test-results/material-public-${theme === "浅色模式" ? "light" : "dark"}.png`,
+        fullPage: true,
+      });
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "100%";
+    });
+    const publicList = await (
+      await page.request.get(`/api/v1/posts/${id}/materials`)
+    ).json();
+    expect(publicList).toHaveLength(1);
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.getByRole("link", { name: "我的记录", exact: true }).click();
+    await page
+      .locator(".own-list article")
+      .filter({ hasText: "材料测试：只使用虚构的截图" })
+      .getByRole("link", { name: "添加 / 管理图片材料", exact: true })
+      .click();
+    await page
+      .locator(".material-own-list article")
+      .filter({ hasText: "公开材料来源" })
+      .getByRole("button", { name: "撤回此材料", exact: true })
+      .click();
+    await expect(page.getByRole("status")).toHaveText(
+      "材料已撤回，原公开链接已失效。",
+    );
+    expect(
+      (
+        await page.request.get(`/api/v1/materials/${publicList[0].id}/public`)
+      ).status(),
+    ).toBe(404);
+  } finally {
+    await adminContext.close();
+  }
+});

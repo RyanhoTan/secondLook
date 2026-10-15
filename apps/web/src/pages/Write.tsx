@@ -24,7 +24,7 @@ function WriteForm() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState("");
   async function create(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -63,11 +63,11 @@ function WriteForm() {
     setBusy(true);
     setError("");
     try {
-      await api("/posts", {
+      const post = await api<{ id: string }>("/posts", {
         method: "POST",
         body: JSON.stringify(checked.data),
       });
-      setDone(true);
+      setDone(post.id);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -85,6 +85,9 @@ function WriteForm() {
         />
         <Link className="button primary" to="/my">
           查看我的记录
+        </Link>
+        <Link className="back-link" to={`/posts/${done}/materials`}>
+          添加图片材料（可选）
         </Link>
       </div>
     );
@@ -212,7 +215,7 @@ function WriteForm() {
             <span>确认这是我的亲身经历，并愿意补充后续。</span>
           </label>
           <p className="small-note">
-            当前阶段支持文字经历，图片与佐证功能将在后续步骤加入。所有投稿先审核，后公开。
+            提交后可添加图片材料，选择公开脱敏副本或仅供审核。所有投稿和材料先审核，后公开。
           </p>
           <button className="button primary" disabled={busy}>
             {busy ? "正在提交…" : "提交审核"}

@@ -4,6 +4,7 @@ import { useSession } from "../lib/session";
 import { useResource } from "../lib/resource";
 import { Feedback, PageHeading } from "../components/ui";
 import { NeedLogin } from "./Account";
+import { MaterialReviews } from "../components/MaterialReviews";
 export function Admin() {
   const { user } = useSession();
   return !user ? (
@@ -37,8 +38,9 @@ function ReviewQueue() {
           ))}
         </div>
       ) : (
-        <Feedback empty="当前没有待审内容。" />
+        <Feedback empty="当前没有待审文字内容。" />
       )}
+      <MaterialReviews />
     </>
   );
 }

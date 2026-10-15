@@ -232,3 +232,16 @@ GitHub 公开仓库与私有仓库由你决定，许可证也需另选；本方�
 - `POST /admin/history/:id/hide` 仅允许管理员隐藏历史版本并记录理由；当前公开版本不能用此入口隐藏。公开历史保留版本号及隐藏提示，移除其正文、标题和说明；关联时间线与通知同样隐藏文字。帖子限制公开后不展示相关通知内容。此能力不替代尚未完成的举报/下架流程。
 - 首次批准建立第 1 版快照；已有公开数据由迁移回填；虚构种子脚本补齐首版且不覆盖既有版本。隐私处理保留受限内部记录，清理与保存期限仍按待决策政策确定。
 - Web 和 App 均有作者修订/查看审核入口、详情更正说明、历史阅读与列表提示；审核和隐藏历史通过网页后台操作。贡献/异议模块尚未实现，其历史版本关联后续补齐。原生只完成类型、lint 与 bundle 导出验证。
+
+## 16. 已实现的图片材料闭环
+
+- Material 保存上传者的内部关联、来源说明、可见范围、审核状态、文件随机键、原件摘要和尺寸；公开 DTO 不返回账号、原始文件名、存储路径或摘要。当前仅作者可为自己的待审/公开帖子上传，其他用户的佐证材料留待贡献模块接入。
+- `POST /posts/:id/materials` 使用 multipart：file、source、visibility（PUBLIC / REVIEW_ONLY）、clientKey（UUID）。不手动指定 multipart Content-Type，以便浏览器与原生 FormData 生成正确边界。相同标识与相同输入重试返回同一条有效材料；复用标识修改内容、重传已撤回/拒绝材料返回冲突。其他材料用新标识。
+- 技术默认上限集中在 contracts：每张 10MB、2000 万像素，每帖最多 6 份待审/通过材料。Multer 限制文件/字段/体积，Sharp 实际解码检查静态 JPEG/PNG/WebP、修正方向、压缩到最长边 2000px，并移除元数据和透明底中的隐藏颜色。文件扩展名与客户端 MIME 不作为判断依据。每账号每分钟最多 30 次上传尝试。
+- 原件和审核预览只通过 `GET /materials/:id/original`、`/preview` 鉴权读取，作者或管理员有权访问，读取有审计。原件保持原始字节供受限核查，预览移除元数据。磁盘默认 apps/api/uploads，文件随机命名并设受限权限；上传目录没有静态路由，Git 已忽略。
+- 作者用 `GET /me/posts/:id/materials` 查看状态、理由和审核预览；公开详情用 `GET /posts/:id/materials` 获取已批准的公开材料。仅审核材料不返回公开列表。
+- 后台 `GET /admin/materials` 与 `POST /admin/materials/:id/decision` 独立处理材料。审核须检查来源、相关性与隐私；拒绝给理由。公开副本由服务器将百分比遮挡区域写入像素后生成，公开副本不包含 EXIF 等原始元数据。仅审核材料即使通过也不生成公开副本。
+- `GET /materials/:id/public` 每次检查材料已通过、范围公开、父帖公开；所有图片接口 no-store，不用永久公开文件地址。撤回/限制展示后新请求不可读取；此前用户已下载的内容无法回收。
+- `DELETE /materials/:id` 由上传者撤回；公开副本链接立即不可再读，公开材料标签重新评估，生成材料变化事件并通知关注者。原件仍受限保存，清理期限尚待政策确定。上传和审核失败会清理本次文件并回滚数据库，进程突然终止后的孤立文件核对留待维护模块补齐。
+- 公开材料通过后，基础标签可由“仅本人陈述”变为“已附材料”；仅审核材料不升级，上传数量不产生“独立佐证”。当前有独立佐证状态不会由材料数量逻辑覆盖，其完整判定与重评待贡献模块实现。材料与具体原文版本的绑定也需在该模块补齐。
+- App 使用 SDK 57 对应的 ImagePicker 和 Crypto，均通过 expo install 安装；仅选择照片，不启用拍摄/录音。参考 [ImagePicker](https://docs.expo.dev/versions/v57.0.0/sdk/imagepicker/)、[Crypto](https://docs.expo.dev/versions/v57.0.0/sdk/crypto/)、[Multer](https://expressjs.com/en/resources/middleware/multer.html)、[Sharp](https://sharp.pixelplumbing.com/api-input/)。手机选图、原生 multipart 与实际网络恢复仍须真机测试。
