@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client"
+  output = "../src/generated/prisma"
+}
+datasource db {
+  provider = "sqlite"
+}
+model User {
+  id String @id @default(cuid())
+  username String @unique
+  nickname String
+  passwordHash String
+  role String @default("USER")
+  sessions Session[]
+  posts Post[]
+  follows Follow[]
+  notifications Notification[]
+}
+model Session {
+  id String @id @default(cuid())
+  tokenHash String @unique
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  expiresAt DateTime
+}
+model Subject {
+  id String @id @default(cuid())
+  name String
+  category String
+  city String
+  address String @default("")
+  createdAt DateTime @default(now())
+  posts Post[]
+  @@unique([name,category,city,address])
+}
+model Post {
+  id String @id @default(cuid())
+  authorId String
+  author User @relation(fields:[authorId],references:[id])
+  subjectId String
+  subject Subject @relation(fields:[subjectId],references:[id])
+  title String
+  body String
+  occurredOn String
+  anonymous Boolean @default(false)
+  status String @default("PENDING")
+  evidence String @default("STATEMENT")
+  disputed Boolean @default(false)
+  reason String?
+  createdAt DateTime @default(now())
+  publishedAt DateTime?
+  updates ProgressUpdate[]
+  follows Follow[]
+  events TimelineEvent[]
+  @@index([status,publishedAt])
+  @@index([subjectId,status])
+}
+model ProgressUpdate {
+  id String @id @default(cuid())
+  postId String
+  post Post @relation(fields:[postId],references:[id])
+  title String
+  body String
+  status String @default("PENDING")
+  reason String?
+  createdAt DateTime @default(now())
+}
+model TimelineEvent {
+  id String @id @default(cuid())
+  postId String
+  post Post @relation(fields:[postId],references:[id])
+  title String
+  body String
+  kind String
+  createdAt DateTime @default(now())
+  notifications Notification[]
+}
+model Follow {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  postId String
+  post Post @relation(fields:[postId],references:[id],onDelete:Cascade)
+  @@unique([userId,postId])
+}
+model Notification {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  eventId String
+  event TimelineEvent @relation(fields:[eventId],references:[id])
+  read Boolean @default(false)
+  createdAt DateTime @default(now())
+  @@unique([userId,eventId])
+}
+model AuditLog {
+  id String @id @default(cuid())
+  actorId String
+  targetId String
+  action String
+  reason String
+  createdAt DateTime @default(now())
+}

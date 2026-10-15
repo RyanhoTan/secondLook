@@ -1,2 +1,114 @@
-export const categories = { COMPANY: "公司", RESTAURANT: "饭店", ATTRACTION: "景点", OTHER: "其他" } as const;
+import { z } from "zod";
+export const categories = {
+  COMPANY: "公司",
+  RESTAURANT: "饭店",
+  ATTRACTION: "景点",
+  OTHER: "其他",
+} as const;
 export type Category = keyof typeof categories;
+export const evidenceLabels = {
+  STATEMENT: "仅本人陈述",
+  MATERIAL: "已附材料",
+  CORROBORATED: "有独立佐证",
+} as const;
+export type EvidenceLevel = keyof typeof evidenceLabels;
+export const credentialsSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(3)
+    .max(32)
+    .regex(/^[a-zA-Z0-9_]+$/, "登录名仅支持字母、数字与下划线"),
+  password: z.string().min(8).max(128),
+});
+export const registerSchema = credentialsSchema.extend({
+  nickname: z.string().trim().min(1).max(24),
+});
+export const subjectSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  category: z.enum(["COMPANY", "RESTAURANT", "ATTRACTION", "OTHER"]),
+  city: z.string().trim().min(2).max(30),
+  address: z.string().trim().max(150).default(""),
+});
+export const postSchema = z.object({
+  subjectId: z.string().min(1),
+  title: z.string().trim().min(5).max(80),
+  body: z.string().trim().min(20).max(5000),
+  occurredOn: z.iso
+    .date()
+    .refine(
+      (v) => v <= new Date().toISOString().slice(0, 10),
+      "发生日期不能晚于今天",
+    ),
+  anonymous: z.boolean(),
+  personalExperience: z.literal(true, { error: "请确认这是你的亲身经历" }),
+});
+export const updateSchema = z.object({
+  title: z.string().trim().min(2).max(80),
+  body: z.string().trim().min(10).max(5000),
+});
+export const decisionSchema = z.object({
+  action: z.enum(["APPROVE", "REJECT"]),
+  reason: z.string().trim().min(2).max(500),
+});
+export const paginationSchema = z.object({
+  page: z.coerce.number().int().min(1).max(10000).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(12),
+  q: z.string().trim().max(100).default(""),
+  city: z.string().trim().max(30).default(""),
+  category: z.enum(["COMPANY", "RESTAURANT", "ATTRACTION", "OTHER"]).optional(),
+});
+export type Subject = {
+  id: string;
+  name: string;
+  category: Category;
+  city: string;
+  address: string;
+  postCount: number;
+};
+export type PublicPost = {
+  id: string;
+  title: string;
+  body: string;
+  occurredOn: string;
+  createdAt: string;
+  authorName: string;
+  anonymous: boolean;
+  evidence: EvidenceLevel;
+  disputed: boolean;
+  subject: Subject;
+  following?: boolean;
+};
+export type TimelineItem = {
+  id: string;
+  title: string;
+  body: string;
+  kind: string;
+  createdAt: string;
+};
+export type PostDetail = PublicPost & { timeline: TimelineItem[] };
+export type Page<T> = { items: T[]; total: number; page: number };
+export type Account = { id: string; nickname: string; role: "USER" | "ADMIN" };
+export type Notification = {
+  id: string;
+  title: string;
+  body: string;
+  postId: string;
+  read: boolean;
+  createdAt: string;
+};
+export type Review = {
+  id: string;
+  title: string;
+  body: string;
+  kind: "POST" | "UPDATE";
+  subjectName: string;
+  createdAt: string;
+};
+export type OwnPost = {
+  id: string;
+  title: string;
+  status: string;
+  reason: string | null;
+  subjectName: string;
+};
