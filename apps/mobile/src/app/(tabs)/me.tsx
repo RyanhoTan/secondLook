@@ -1,3 +1,4 @@
+import { SegmentedControl } from "../../components/SegmentedControl";
 import { useState } from "react";
 import { router } from "expo-router";
 import { Text, View } from "react-native";
@@ -19,17 +20,19 @@ export default function Me() {
         <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>
           外观设置
         </Text>
-        {(["system", "light", "dark"] as const).map((m) => (
-          <Button
-            key={m}
-            secondary={mode !== m}
-            onPress={() =>
-              void changeMode(m).catch((e) => setError((e as Error).message))
-            }
-          >
-            {{ system: "跟随系统", light: "浅色模式", dark: "深色模式" }[m]}
-          </Button>
-        ))}
+        <SegmentedControl
+          options={[
+            { value: "system", label: "跟随系统" },
+            { value: "light", label: "浅色" },
+            { value: "dark", label: "深色" },
+          ]}
+          value={mode}
+          onChange={(value) =>
+            void changeMode(value as "system" | "light" | "dark").catch((e) =>
+              setError((e as Error).message),
+            )
+          }
+        />
       </View>
       {error && <Message error={error} />}{" "}
       {user ? (
@@ -68,11 +71,11 @@ function OwnList() {
           <View
             key={p.id}
             style={{
-              padding: 18,
+              padding: 24,
               borderWidth: 1,
               borderColor: colors.line,
               backgroundColor: colors.surface,
-              borderRadius: 13,
+              borderRadius: 22,
               marginBottom: 12,
               gap: 11,
             }}

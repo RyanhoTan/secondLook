@@ -12,26 +12,26 @@ import { createClient } from "@secondlook/contracts/client";
 import type { Account } from "@secondlook/contracts";
 export const palettes = {
   light: {
-    bg: "#f5f5f7",
+    bg: "#fafafa",
     surface: "#ffffff",
-    ink: "#1d1d1f",
-    muted: "#626568",
-    line: "#e6e9e2",
-    accent: "#315c49",
-    soft: "#e7eee7",
+    ink: "#1c1c1e",
+    muted: "#68686d",
+    line: "#e9e9ec",
+    accent: "#1c1c1e",
+    soft: "#f0f0f3",
     buttonInk: "#ffffff",
-    danger: "#a34e3f",
+    danger: "#af3b32",
   },
   dark: {
-    bg: "#101112",
-    surface: "#1c1d1f",
+    bg: "#0d0d0e",
+    surface: "#19191b",
     ink: "#f5f5f7",
-    muted: "#b0b4b8",
-    line: "#343d36",
-    accent: "#b4d1b9",
-    soft: "#2b4032",
-    buttonInk: "#17251c",
-    danger: "#f0a394",
+    muted: "#aaaab0",
+    line: "#303033",
+    accent: "#f5f5f7",
+    soft: "#242427",
+    buttonInk: "#141416",
+    danger: "#ffa59d",
   },
 };
 type Mode = "system" | "light" | "dark";
@@ -87,8 +87,8 @@ function useAppState() {
     }
   }
   async function changeMode(value: Mode) {
-    await SecureStore.setItemAsync("secondlook-theme", value);
     setMode(value);
+    await SecureStore.setItemAsync("secondlook-theme", value);
   }
   const dark = mode === "dark" || (mode === "system" && system === "dark");
   return {

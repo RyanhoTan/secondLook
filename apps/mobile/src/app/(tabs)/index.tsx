@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   categories,
   type Category,
@@ -10,12 +11,12 @@ import { useApp } from "../../lib/context";
 import { useResource } from "../../lib/resource";
 import {
   Screen,
-  Field,
   Heading,
   PostCard,
   Message,
   Button,
 } from "../../components/ui";
+import { SegmentedControl } from "../../components/SegmentedControl";
 export default function Discover() {
   const { colors } = useApp();
   const [q, setQ] = useState("");
@@ -31,93 +32,135 @@ export default function Discover() {
     ...(category ? { category } : {}),
   });
   const posts = useResource<Page<PublicPost>>(`/posts?${params}`);
+  function submit() {
+    setSearch(q);
+    setActiveCity(city);
+    setPage(1);
+  }
   return (
     <Screen>
+      <Heading
+        eyebrow="A little more perspective."
+        title="发现经历."
+        description="在决定之前，听听另一种声音。"
+      />
       <View
         style={{
-          paddingVertical: 12,
-          marginBottom: 25,
+          backgroundColor: colors.surface,
+          borderRadius: 20,
+          padding: 15,
+          borderWidth: 1,
+          borderColor: colors.line,
         }}
       >
-        <Heading
-          eyebrow="真实经历，持续更新"
-          title="发现经历"
-          description="搜索你关心的对象，看看亲历记录与后续变化。"
-        />
-        <Text style={{ fontSize: 12, color: colors.muted }}>
-          本地预览 · 所有示例均为虚构
-        </Text>
-      </View>
-      <Field
-        label="搜索对象或经历"
-        placeholder="公司、饭店、景点，或关心的问题"
-        value={q}
-        onChangeText={setQ}
-        returnKeyType="search"
-        onSubmitEditing={() => {
-          setSearch(q);
-          setActiveCity(city);
-          setPage(1);
-        }}
-      />
-      <Field
-        label="城市"
-        placeholder="留空搜索全国"
-        value={city}
-        onChangeText={setCity}
-      />
-      <Button
-        secondary
-        onPress={() => {
-          setSearch(q);
-          setActiveCity(city);
-          setPage(1);
-        }}
-      >
-        搜索经历
-      </Button>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8, paddingVertical: 23 }}
-      >
-        {[["", "全部"], ...Object.entries(categories)].map(([key, label]) => (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Ionicons name="search-outline" size={20} color={colors.muted} />
+          <TextInput
+            accessibilityLabel="搜索对象或经历"
+            placeholder="公司、餐厅、目的地…"
+            placeholderTextColor={colors.muted}
+            value={q}
+            onChangeText={setQ}
+            returnKeyType="search"
+            onSubmitEditing={submit}
+            style={{ flex: 1, color: colors.ink, fontSize: 16, minHeight: 46 }}
+          />
           <Pressable
-            key={key}
             accessibilityRole="button"
-            accessibilityState={{ selected: category === key }}
-            onPress={() => {
-              setCategory(key as Category | "");
-              setPage(1);
-            }}
+            accessibilityLabel="搜索"
+            onPress={submit}
             style={({ pressed }) => ({
-              paddingVertical: 10,
-              paddingHorizontal: 15,
-              borderRadius: 10,
-              backgroundColor: category === key ? colors.ink : colors.surface,
-              opacity: pressed ? 0.7 : 1,
+              width: 44,
+              height: 44,
+              borderRadius: 13,
+              backgroundColor: colors.ink,
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.6 : 1,
             })}
           >
-            <Text
-              style={{
-                color: category === key ? colors.bg : colors.muted,
-                fontSize: 12,
-              }}
-            >
-              {label}
-            </Text>
+            <Ionicons name="arrow-forward" size={20} color={colors.bg} />
           </Pressable>
-        ))}
-      </ScrollView>
-      {posts.loading || posts.error ? (
-        <Message loading={posts.loading} error={posts.error} />
-      ) : posts.data?.items.length ? (
-        posts.data.items.map((p) => <PostCard post={p} key={p.id} />)
-      ) : (
-        <Message empty="没有找到相关经历，试试其他关键词。" />
-      )}
+        </View>
+        <View
+          style={{
+            borderTopWidth: 1,
+            borderTopColor: colors.line,
+            marginTop: 10,
+            paddingTop: 6,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Ionicons name="location-outline" size={16} color={colors.muted} />
+          <TextInput
+            accessibilityLabel="筛选城市"
+            placeholder="全国"
+            placeholderTextColor={colors.muted}
+            value={city}
+            onChangeText={setCity}
+            returnKeyType="search"
+            onSubmitEditing={submit}
+            style={{ flex: 1, color: colors.ink, fontSize: 13, minHeight: 40 }}
+          />
+        </View>
+      </View>
+      <SegmentedControl
+        options={[
+          { value: "", label: "全部" },
+          ...Object.entries(categories).map(([value, label]) => ({
+            value,
+            label,
+          })),
+        ]}
+        value={category}
+        onChange={(value) => {
+          setCategory(value as Category | "");
+          setPage(1);
+        }}
+      />
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginTop: 10,
+          marginBottom: 16,
+        }}
+      >
+        <Text
+          accessibilityRole="header"
+          style={{ fontSize: 17, fontWeight: "600", color: colors.ink }}
+        >
+          最新经历{" "}
+          <Text
+            style={{ fontSize: 12, fontWeight: "400", color: colors.muted }}
+          >
+            {posts.data?.total ?? "—"}
+          </Text>
+        </Text>
+        <Text style={{ fontSize: 12, color: colors.muted }}>按发布时间</Text>
+      </View>
+      <View
+        style={{
+          borderRadius: 24,
+          overflow: "hidden",
+          borderWidth: 1,
+          borderColor: colors.line,
+          backgroundColor: colors.surface,
+        }}
+      >
+        {posts.loading || posts.error ? (
+          <Message loading={posts.loading} error={posts.error} />
+        ) : posts.data?.items.length ? (
+          posts.data.items.map((p) => <PostCard post={p} key={p.id} />)
+        ) : (
+          <Message empty="没有找到相关经历，试试其他关键词。" />
+        )}
+      </View>
       {posts.data && posts.data.total > 12 && (
-        <View style={{ gap: 10 }}>
+        <View style={{ gap: 10, marginTop: 20 }}>
           {page > 1 && (
             <Button secondary onPress={() => setPage((p) => p - 1)}>
               上一页
@@ -128,11 +171,16 @@ export default function Discover() {
               下一页
             </Button>
           )}
-          <Text style={{ color: colors.muted, textAlign: "center" }}>
-            第 {page} 页
-          </Text>
         </View>
       )}
+      <View style={{ paddingVertical: 30, gap: 8 }}>
+        <Text style={{ fontSize: 13, color: colors.muted, lineHeight: 24 }}>
+          经历可以被补充，判断也可以改变。{"\n"}关注后续，给事情一点时间。
+        </Text>
+        <Text style={{ fontSize: 12, color: colors.muted, marginTop: 14 }}>
+          本地预览 · 所有示例均为虚构
+        </Text>
+      </View>
     </Screen>
   );
 }
