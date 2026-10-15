@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "engines": {
-    "node": ">=22.12.0"
+    "node": "^22.13.0 || ^24.3.0 || >=26.0.0"
   },
   "scripts": {
     "dev": "concurrently -k -n api,web \"npm run dev -w @secondlook/api\" \"npm run dev -w @secondlook/web\"",
@@ -15,8 +15,14 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test -w @secondlook/api",
     "build": "npm run build -w @secondlook/web",
-    "db:migrate": "npm run db:migrate -w @secondlook/api",
-    "db:seed": "npm run db:seed -w @secondlook/api"
+    "db:migrate": "npm exec -w @secondlook/api -- prisma migrate dev",
+    "db:seed": "npm run db:seed -w @secondlook/api",
+    "test:e2e": "npm run test:e2e -w @secondlook/web",
+    "db:generate": "npm run db:generate -w @secondlook/api",
+    "db:deploy": "npm run db:deploy -w @secondlook/api",
+    "lint": "npm run lint -w @secondlook/mobile",
+    "setup": "node scripts/setup.mjs",
+    "export:mobile": "npm run export -w @secondlook/mobile"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
