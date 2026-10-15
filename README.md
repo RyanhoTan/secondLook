@@ -67,6 +67,7 @@ iPhone 先用 Expo Go。按当前 Expo 官方说明，电脑 Expo CLI 与实体 
 - `apps/web`：React 网页与后台；样式分为基础、布局、发现、表单详情、响应式五部分。
 - `apps/api`：Express；路由处理输入，审核事务和公开 DTO 集中在业务模块。
 - `packages/contracts`：共享请求校验、公开类型及轻量请求工具，不共享服务端模型。
+- [第一版完工验收清单](docs/acceptance.md)：统一范围、逐项状态、验收门槛与待决策事项。
 - [产品需求](docs/product.md)、[开发方案](docs/development.md)、[实际进展与验证](docs/progress.md)。
 - [Apple Design 技能全文](docs/design/apple-design-skill.md)、[产品 UI 规范](docs/design/ui-spec.md)。
 
