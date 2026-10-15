@@ -1,0 +1,17 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.expo/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+*.db
+*.db-*
+*.sqlite*
+apps/api/data/
+apps/api/uploads/
+.git-commit-message.txt
+.DS_Store

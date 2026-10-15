@@ -1,0 +1,33 @@
+{
+  "name": "@secondlook/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx src/seed.ts"
+  },
+  "dependencies": {
+    "@secondlook/contracts": "*",
+    "express": "^5.1.0",
+    "cors": "^2.8.5",
+    "helmet": "^8.1.0",
+    "express-rate-limit": "^8.2.0",
+    "dotenv": "^17.2.3",
+    "@prisma/client": "7.10.0",
+    "@prisma/adapter-better-sqlite3": "7.10.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.5",
+    "@types/cors": "^2.8.19",
+    "@types/node": "^22.19.0",
+    "@types/supertest": "^6.0.3",
+    "prisma": "7.10.0",
+    "tsx": "^4.20.6",
+    "vitest": "^3.2.4",
+    "supertest": "^7.1.4"
+  }
+}
