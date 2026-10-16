@@ -13,6 +13,8 @@ test-results/
 *.sqlite*
 apps/api/data/
 apps/api/uploads/
+*.secondlook.lock
+backups/
 .git-commit-message.txt
 .DS_Store
 apps/api/src/generated/

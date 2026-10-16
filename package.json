@@ -22,7 +22,10 @@
     "db:deploy": "npm run db:deploy -w @secondlook/api",
     "lint": "npm run lint -w @secondlook/mobile",
     "setup": "node scripts/setup.mjs",
-    "export:mobile": "npm run export -w @secondlook/mobile"
+    "export:mobile": "npm run export -w @secondlook/mobile",
+    "backup": "npm run backup -w @secondlook/api --",
+    "backup:verify": "npm run backup:verify -w @secondlook/api --",
+    "restore": "npm run restore -w @secondlook/api --"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

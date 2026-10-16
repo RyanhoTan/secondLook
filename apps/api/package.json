@@ -10,7 +10,10 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx src/seed.ts",
     "db:generate": "prisma generate",
-    "db:deploy": "prisma migrate deploy"
+    "db:deploy": "prisma migrate deploy",
+    "backup": "tsx src/maintenance.ts backup",
+    "backup:verify": "tsx src/maintenance.ts verify",
+    "restore": "tsx src/maintenance.ts restore"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "7.10.0",

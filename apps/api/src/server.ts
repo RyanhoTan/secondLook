@@ -1,6 +1,10 @@
 import "dotenv/config";
 import { createApp } from "./app.js";
 import { openDatabase } from "./db.js";
+import { MaterialFiles } from "./material-files.js";
+import { databasePath, lockStorage } from "./storage-lock.js";
+const releaseStorage = lockStorage(databasePath(), new MaterialFiles().root, "api");
+process.on("exit", releaseStorage);
 const db = openDatabase();
 const server = createApp(db, {
   authLimit: Number(process.env.AUTH_RATE_LIMIT ?? 20),
