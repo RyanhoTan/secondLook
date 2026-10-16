@@ -122,6 +122,9 @@ function NotificationList() {
         title="后续追踪"
         description="你关注的帖子或对象有新公开经历和重要进展时，会在这里告诉你。"
       />
+      <Link className="back-link" to="/following">
+        管理我的关注
+      </Link>
       {error && (
         <p className="error" role="alert">
           {error}
@@ -175,6 +178,9 @@ function OwnList() {
   return (
     <>
       <PageHeading eyebrow="留下记录，也补充后来" title="我的记录" />
+      <Link className="back-link" to="/following">
+        管理我的关注
+      </Link>
       <DraftList />
       {!resource.data ? (
         <Feedback error={resource.error} loading={resource.loading} />

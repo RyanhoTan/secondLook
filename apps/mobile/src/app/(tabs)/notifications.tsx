@@ -36,6 +36,9 @@ function List() {
         description="你关注的帖子或对象有新公开经历和重要进展时，会在这里告诉你。"
       />
       {error && <Message error={error} />}
+      <Button secondary onPress={() => router.push("/following")}>
+        管理我的关注
+      </Button>
       <Button secondary onPress={() => setVersion((v) => v + 1)}>
         刷新进展
       </Button>

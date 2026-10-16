@@ -39,6 +39,9 @@ export default function Me() {
       {error && <Message error={error} />}{" "}
       {user ? (
         <>
+          <Button secondary onPress={() => router.push("/following")}>
+            管理我的关注
+          </Button>
           <DraftList />
           <OwnList />
           <Button

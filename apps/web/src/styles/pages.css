@@ -3,6 +3,33 @@
   max-width: 760px;
   overflow-wrap: anywhere;
 }
+.follow-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.follow-list {
+  max-width: 800px;
+}
+.follow-list article {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--line);
+}
+.follow-list article > div {
+  flex: 1 1 260px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.follow-list h2 {
+  font-size: 1.125rem;
+  line-height: 1.6;
+}
 .page-heading h1 {
   font-size: 2.5rem;
   line-height: 1.25;

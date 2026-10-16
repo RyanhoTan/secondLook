@@ -12,6 +12,7 @@ import { Admin } from "./pages/Admin";
 import { Revision } from "./pages/Revision";
 import { MaterialManager } from "./pages/Materials";
 import { Objects } from "./pages/Objects";
+import { FollowingPage } from "./pages/Following";
 import "./styles.css";
 function ScrollReset() {
   const { pathname } = useLocation();
@@ -36,6 +37,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="login" element={<Login />} />
             <Route path="write" element={<Write />} />
             <Route path="my" element={<MyPosts />} />
+            <Route path="following" element={<FollowingPage />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="admin" element={<Admin />} />
             <Route

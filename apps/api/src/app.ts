@@ -11,6 +11,7 @@ import { materialRoutes } from "./routes/materials.js";
 import { MaterialFiles } from "./material-files.js";
 import { errorHandler } from "./http.js";
 import { draftRoutes } from "./routes/drafts.js";
+import { followingRoutes } from "./routes/following.js";
 export function createApp(
   db: Database,
   options: { uploadRoot?: string; authLimit?: number } = {},
@@ -51,6 +52,7 @@ export function createApp(
     authRoutes(db),
     communityRoutes(db),
     draftRoutes(db),
+    followingRoutes(db),
     revisionRoutes(db),
     materialRoutes(db, new MaterialFiles(options.uploadRoot)),
     adminRoutes(db),

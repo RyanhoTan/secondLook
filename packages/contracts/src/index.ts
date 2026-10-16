@@ -231,6 +231,35 @@ export type Subject = {
   postCount: number;
 };
 export type SubjectDetail = Subject & { following: boolean };
+export const followingQuerySchema = z.object({
+  target: z.enum(["POST", "SUBJECT"]).default("POST"),
+  page: z.preprocess(
+    (value) => (Array.isArray(value) ? null : value),
+    paginationSchema.shape.page,
+  ),
+  limit: z.preprocess(
+    (value) => (Array.isArray(value) ? null : value),
+    paginationSchema.shape.limit,
+  ),
+});
+export type FollowingQuery = z.infer<typeof followingQuerySchema>;
+export function followingParams(value: FollowingQuery) {
+  return new URLSearchParams({
+    target: value.target,
+    page: String(value.page),
+    limit: String(value.limit),
+  });
+}
+export type Following =
+  | { target: "SUBJECT"; targetId: string; subject: Subject }
+  | { target: "POST"; targetId: string; available: false }
+  | {
+      target: "POST";
+      targetId: string;
+      available: true;
+      title: string;
+      subject: Subject;
+    };
 export type PublicPost = {
   issueTypes: IssueType[];
   id: string;
