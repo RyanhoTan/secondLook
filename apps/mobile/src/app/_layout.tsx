@@ -19,6 +19,7 @@ function Navigation() {
         <Stack.Screen name="login" options={{ title: "账号" }} />
         <Stack.Screen name="posts/[id]" options={{ title: "经历与后续" }} />
         <Stack.Screen name="subjects/[id]" options={{ title: "对象记录" }} />
+        <Stack.Screen name="objects" options={{ title: "查找对象" }} />
         <Stack.Screen name="update/[id]" options={{ title: "补充进展" }} />
         <Stack.Screen name="revise/[id]" options={{ title: "修订原文" }} />
         <Stack.Screen name="materials/[id]" options={{ title: "图片材料" }} />

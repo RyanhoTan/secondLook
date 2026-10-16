@@ -1,18 +1,18 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { Search, MapPin, ArrowRight } from "lucide-react";
-import { LayoutGroup, motion } from "motion/react";
 import {
-  categories,
   postBrowseSchema,
   postBrowseParams,
   postSortLabels,
+  subjectBrowseParams,
   type Category,
   type Page,
   type PublicPost,
 } from "@secondlook/contracts";
 import { useResource } from "../lib/resource";
-import { PostCard, Feedback, CategoryIcon } from "../components/ui";
+import { PostCard, Feedback } from "../components/ui";
+import { CategoryFilter } from "../components/CategoryFilter";
 import { Pagination } from "../components/Pagination";
 import { EvidenceGuide } from "../components/EvidenceGuide";
 function filterInputs(params: URLSearchParams) {
@@ -155,36 +155,17 @@ export function Discover() {
           </p>
         )}
       </form>
+      <Link
+        className="back-link object-search-link"
+        to={`/objects?${subjectBrowseParams({ q: inputs.q, city: inputs.city, category: active.success ? active.data.category : undefined, page: 1, limit: 12 })}`}
+      >
+        查找具体对象
+      </Link>
       <div className="browse-toolbar">
-        <LayoutGroup id="category-filter">
-          <div className="category-tabs" role="group" aria-label="经历分类">
-            {[["", "全部经历"], ...Object.entries(categories)].map(
-              ([key, label]) => (
-                <button
-                  key={key}
-                  aria-pressed={category === key}
-                  onClick={() => {
-                    apply({ category: key as Category | "" });
-                  }}
-                >
-                  {category === key && (
-                    <motion.span
-                      className="category-selection"
-                      layoutId="category-selection"
-                      transition={{ type: "spring", bounce: 0, duration: 0.35 }}
-                    />
-                  )}
-                  <span className="category-label">
-                    {key && (
-                      <CategoryIcon category={key as Category} size={17} />
-                    )}
-                    <span>{label}</span>
-                  </span>
-                </button>
-              ),
-            )}
-          </div>
-        </LayoutGroup>
+        <CategoryFilter
+          value={category}
+          onChange={(category) => apply({ category })}
+        />
         <EvidenceGuide />
       </div>
       <section className="experience-section">

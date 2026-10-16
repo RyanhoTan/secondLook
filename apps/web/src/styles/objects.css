@@ -1,0 +1,68 @@
+.objects-page {
+  max-width: 1040px;
+  margin: 24px auto 0;
+}
+.objects-page .search-bar {
+  max-width: none;
+  margin-bottom: 24px;
+}
+.objects-page .city-filter input {
+  min-height: 44px;
+}
+.object-search-link {
+  margin: 0 0 20px;
+}
+.object-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+.subject-results {
+  border-top: 1px solid var(--line);
+}
+.subject-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 24px;
+  row-gap: 12px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--line);
+}
+.subject-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.subject-identity a {
+  min-width: 0;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}
+.subject-identity h3 {
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+.subject-count {
+  align-self: center;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+.subject-address {
+  grid-column: 1 / -1;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .subject-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .object-toolbar {
+    align-items: stretch;
+  }
+  .object-toolbar .category-tabs {
+    width: 100%;
+  }
+}

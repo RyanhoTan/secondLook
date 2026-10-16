@@ -151,6 +151,16 @@ export const paginationSchema = z.object({
   city: z.string().trim().max(30).default(""),
   category: z.enum(["COMPANY", "RESTAURANT", "ATTRACTION", "OTHER"]).optional(),
 });
+export type SubjectBrowse = z.infer<typeof paginationSchema>;
+export function subjectBrowseParams(value: SubjectBrowse) {
+  const params = new URLSearchParams();
+  if (value.q) params.set("q", value.q);
+  if (value.city) params.set("city", value.city);
+  if (value.category) params.set("category", value.category);
+  if (value.page > 1) params.set("page", String(value.page));
+  if (value.limit !== 12) params.set("limit", String(value.limit));
+  return params;
+}
 export const postSortLabels = {
   PUBLISHED_DESC: "最新发布",
   OCCURRED_DESC: "最近发生",

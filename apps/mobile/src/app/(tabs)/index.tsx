@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { router } from "expo-router";
 import {
   categories,
   postBrowseSchema,
@@ -13,7 +14,13 @@ import {
 } from "@secondlook/contracts";
 import { useApp } from "../../lib/context";
 import { useResource } from "../../lib/resource";
-import { Screen, Heading, PostCard, Message } from "../../components/ui";
+import {
+  Screen,
+  Heading,
+  PostCard,
+  Message,
+  Button,
+} from "../../components/ui";
 import { BrowseFilters } from "../../components/BrowseFilters";
 import { Pagination } from "../../components/Pagination";
 import { SegmentedControl } from "../../components/SegmentedControl";
@@ -123,6 +130,23 @@ export default function Discover() {
             style={{ flex: 1, color: colors.ink, fontSize: 13, minHeight: 44 }}
           />
         </View>
+      </View>
+      <View style={{ marginTop: 12 }}>
+        <Button
+          secondary
+          onPress={() =>
+            router.push({
+              pathname: "/objects",
+              params: {
+                q: inputs.q,
+                city: inputs.city,
+                category: active.category ?? "",
+              },
+            })
+          }
+        >
+          查找具体对象
+        </Button>
       </View>
       <BrowseFilters
         value={inputs}

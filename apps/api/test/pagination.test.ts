@@ -130,3 +130,80 @@ it("rejects invalid paging values and retains totals for an empty later page", a
   expect(empty.body.items).toEqual([]);
   expect(empty.body.total).toBe(25);
 });
+it("keeps empty objects discoverable and excludes non-public experiences from counts", async () => {
+  const authorId = (
+    await db.user.findUniqueOrThrow({
+      where: { username: "pagination_author" },
+    })
+  ).id;
+  await db.post.createMany({
+    data: ["PENDING", "REJECTED", "RESTRICTED"].map((status) => ({
+      subjectId: "paging-subject-01",
+      authorId,
+      status,
+      title: "不可公开的虚构记录",
+      body: "私有内容不能泄漏到对象目录。",
+      occurredOn: "2026-01-01",
+    })),
+  });
+  const result = await request(app)
+    .get("/api/v1/subjects")
+    .query({ q: "分页测试路 1 号", city: "测试", category: "RESTAURANT" });
+  expect(result.status).toBe(200);
+  expect(result.body.total).toBe(1);
+  expect(result.body.items[0]).toMatchObject({
+    id: "paging-subject-01",
+    postCount: 0,
+    address: "分页测试路 1 号",
+  });
+  expect(JSON.stringify(result.body)).not.toContain("不可公开的虚构记录");
+  expect(JSON.stringify(result.body)).not.toContain(authorId);
+  expect(
+    (await request(app).get("/api/v1/posts?subjectId=paging-subject-01")).body
+      .total,
+  ).toBe(0);
+});
+it("distinguishes same-name branches by address, city and category", async () => {
+  await db.subject.createMany({
+    data: [
+      {
+        id: "branch-east",
+        name: "虚构同名分店",
+        category: "RESTAURANT",
+        city: "东测试市",
+        address: "虚构东路 8 号",
+      },
+      {
+        id: "branch-west",
+        name: "虚构同名分店",
+        category: "RESTAURANT",
+        city: "西测试市",
+        address: "虚构西路 9 号",
+      },
+      {
+        id: "branch-other",
+        name: "虚构同名分店",
+        category: "OTHER",
+        city: "东测试市",
+        address: "虚构东路 10 号",
+      },
+    ],
+  });
+  const all = await request(app)
+    .get("/api/v1/subjects")
+    .query({ q: "虚构同名分店", limit: 1 });
+  expect(all.body.total).toBe(3);
+  expect(all.body.items).toHaveLength(1);
+  const filtered = await request(app)
+    .get("/api/v1/subjects")
+    .query({ q: "虚构同名", city: "东测试", category: "RESTAURANT" });
+  expect(filtered.body.items.map((s: { id: string }) => s.id)).toEqual([
+    "branch-east",
+  ]);
+  const byAddress = await request(app)
+    .get("/api/v1/subjects")
+    .query({ q: "虚构西路" });
+  expect(byAddress.body.items.map((s: { id: string }) => s.id)).toEqual([
+    "branch-west",
+  ]);
+});

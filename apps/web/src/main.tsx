@@ -11,6 +11,7 @@ import { Write } from "./pages/Write";
 import { Admin } from "./pages/Admin";
 import { Revision } from "./pages/Revision";
 import { MaterialManager } from "./pages/Materials";
+import { Objects } from "./pages/Objects";
 import "./styles.css";
 function ScrollReset() {
   const { pathname } = useLocation();
@@ -31,6 +32,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="posts/:id/revise" element={<Revision />} />
             <Route path="posts/:id/materials" element={<MaterialManager />} />
             <Route path="subjects/:id" element={<SubjectPage />} />
+            <Route path="objects" element={<Objects />} />
             <Route path="login" element={<Login />} />
             <Route path="write" element={<Write />} />
             <Route path="my" element={<MyPosts />} />
