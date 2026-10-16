@@ -1,14 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import type {
-  Account,
-  Notification,
-  OwnPost,
-  Page,
-} from "@secondlook/contracts";
+import type { Account, OwnPost, Page } from "@secondlook/contracts";
 import { Pagination } from "../components/Pagination";
 import { useSession } from "../lib/session";
-import { useResource, date } from "../lib/resource";
+import { useResource } from "../lib/resource";
 import { Feedback, PageHeading } from "../components/ui";
 import { UpdateForm } from "./Detail";
 import { DraftList } from "../components/DraftList";
@@ -100,67 +95,6 @@ export function Login() {
         <p className="small-note">本地开发版本。网页刷新后需重新登录。</p>
       </form>
     </div>
-  );
-}
-export function Notifications() {
-  const { user } = useSession();
-  return user ? <NotificationList /> : <NeedLogin />;
-}
-function NotificationList() {
-  const [version, setVersion] = useState(0);
-  const { api } = useSession();
-  const resource = useResource<Notification[]>("/notifications", version);
-  async function mark(id: string) {
-    await api(`/notifications/${id}/read`, { method: "PATCH" });
-    setVersion((v) => v + 1);
-  }
-  const [error, setError] = useState("");
-  return (
-    <>
-      <PageHeading
-        eyebrow="持续关注，不错过变化"
-        title="后续追踪"
-        description="你关注的帖子或对象有新公开经历和重要进展时，会在这里告诉你。"
-      />
-      <Link className="back-link" to="/following">
-        管理我的关注
-      </Link>
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-      {!resource.data ? (
-        <Feedback error={resource.error} loading={resource.loading} />
-      ) : resource.data.length ? (
-        <div className="notification-list">
-          {resource.data.map((n) => (
-            <article key={n.id} className={n.read ? "read" : ""}>
-              <small>
-                {date(n.createdAt)} {!n.read && "· 未读"}
-              </small>
-              <Link to={`/posts/${n.postId}`}>
-                <p className="small-note">{n.subjectName}</p>
-                <h3>{n.title}</h3>
-                <p>{n.body}</p>
-              </Link>
-              {!n.read && (
-                <button
-                  className="text-button"
-                  onClick={() =>
-                    void mark(n.id).catch((e) => setError((e as Error).message))
-                  }
-                >
-                  标为已读
-                </button>
-              )}
-            </article>
-          ))}
-        </div>
-      ) : (
-        <Feedback empty="还没有新的进展。先关注一条经历或一个对象，后续变化会出现在这里。" />
-      )}
-    </>
   );
 }
 export function MyPosts() {

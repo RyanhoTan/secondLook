@@ -6,13 +6,14 @@ import { SessionProvider } from "./lib/session";
 import { Layout } from "./components/Layout";
 import { Discover } from "./pages/Discover";
 import { Detail, SubjectPage } from "./pages/Detail";
-import { Login, MyPosts, Notifications } from "./pages/Account";
+import { Login, MyPosts } from "./pages/Account";
 import { Write } from "./pages/Write";
 import { Admin } from "./pages/Admin";
 import { Revision } from "./pages/Revision";
 import { MaterialManager } from "./pages/Materials";
 import { Objects } from "./pages/Objects";
 import { FollowingPage } from "./pages/Following";
+import { Notifications } from "./pages/Notifications";
 import "./styles.css";
 function ScrollReset() {
   const { pathname } = useLocation();

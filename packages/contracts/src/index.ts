@@ -231,8 +231,7 @@ export type Subject = {
   postCount: number;
 };
 export type SubjectDetail = Subject & { following: boolean };
-export const followingQuerySchema = z.object({
-  target: z.enum(["POST", "SUBJECT"]).default("POST"),
+export const privatePaginationSchema = z.object({
   page: z.preprocess(
     (value) => (Array.isArray(value) ? null : value),
     paginationSchema.shape.page,
@@ -241,6 +240,16 @@ export const followingQuerySchema = z.object({
     (value) => (Array.isArray(value) ? null : value),
     paginationSchema.shape.limit,
   ),
+});
+export type PrivatePagination = z.infer<typeof privatePaginationSchema>;
+export function privatePageParams(value: PrivatePagination) {
+  return new URLSearchParams({
+    page: String(value.page),
+    limit: String(value.limit),
+  });
+}
+export const followingQuerySchema = privatePaginationSchema.extend({
+  target: z.enum(["POST", "SUBJECT"]).default("POST"),
 });
 export type FollowingQuery = z.infer<typeof followingQuerySchema>;
 export function followingParams(value: FollowingQuery) {

@@ -12,6 +12,7 @@ import { MaterialFiles } from "./material-files.js";
 import { errorHandler } from "./http.js";
 import { draftRoutes } from "./routes/drafts.js";
 import { followingRoutes } from "./routes/following.js";
+import { notificationRoutes } from "./routes/notifications.js";
 export function createApp(
   db: Database,
   options: { uploadRoot?: string; authLimit?: number } = {},
@@ -53,6 +54,7 @@ export function createApp(
     communityRoutes(db),
     draftRoutes(db),
     followingRoutes(db),
+    notificationRoutes(db),
     revisionRoutes(db),
     materialRoutes(db, new MaterialFiles(options.uploadRoot)),
     adminRoutes(db),

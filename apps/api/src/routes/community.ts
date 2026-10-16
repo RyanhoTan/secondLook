@@ -208,45 +208,5 @@ export function communityRoutes(db: Database) {
       })),
     });
   });
-  router.get("/notifications", authenticate(db, true), async (_req, res) => {
-    const notifications = await db.notification.findMany({
-      where: {
-        userId: res.locals.user.id,
-        event: { post: { status: "PUBLISHED" } },
-      },
-      include: {
-        event: {
-          include: {
-            revision: { select: { visible: true } },
-            post: { select: { subject: { select: { name: true } } } },
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 100,
-    });
-    res.json(
-      notifications.map((n) => ({
-        id: n.id,
-        ...publicEventText(n.event),
-        postId: n.event.postId,
-        subjectName: n.event.post.subject.name,
-        read: n.read,
-        createdAt: n.createdAt.toISOString(),
-      })),
-    );
-  });
-  router.patch(
-    "/notifications/:id/read",
-    authenticate(db, true),
-    async (req, res) => {
-      const result = await db.notification.updateMany({
-        where: { id: String(req.params.id), userId: res.locals.user.id },
-        data: { read: true },
-      });
-      if (!result.count) throw new HttpError(404, "通知不存在");
-      res.status(204).end();
-    },
-  );
   return router;
 }
