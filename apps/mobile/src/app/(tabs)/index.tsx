@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import {
   categories,
   postBrowseSchema,
@@ -25,23 +25,72 @@ import {
 import { BrowseFilters } from "../../components/BrowseFilters";
 import { Pagination } from "../../components/Pagination";
 import { SegmentedControl } from "../../components/SegmentedControl";
+function navigate(value: PostBrowse) {
+  // setParams merges keys: explicitly clear optional filters from the previous route.
+  router.setParams({
+    q: value.q,
+    city: value.city,
+    category: value.category ?? "",
+    subjectId: value.subjectId ?? "",
+    issue: value.issue ?? "",
+    occurredFrom: value.occurredFrom ?? "",
+    occurredTo: value.occurredTo ?? "",
+    sort: value.sort,
+    page: String(value.page),
+    limit: String(value.limit),
+  });
+}
+const blank = {
+  q: "",
+  city: "",
+  occurredFrom: "",
+  occurredTo: "",
+  sort: "PUBLISHED_DESC",
+  issue: "",
+};
 export default function Discover() {
-  const { colors } = useApp();
-  const blank = {
-    q: "",
-    city: "",
-    occurredFrom: "",
-    occurredTo: "",
-    sort: "PUBLISHED_DESC",
-    issue: "",
-  };
-  const [inputs, setInputs] = useState(blank);
-  const [active, setActive] = useState<PostBrowse>(() =>
-    postBrowseSchema.parse({}),
+  const params = useLocalSearchParams();
+  const parsed = postBrowseSchema.safeParse({
+    ...params,
+    // Reject repeated numeric params instead of letting number coercion accept arrays.
+    page: Array.isArray(params.page) ? null : params.page,
+    limit: Array.isArray(params.limit) ? null : params.limit,
+    category: params.category || undefined,
+    issue: params.issue || undefined,
+    subjectId: params.subjectId || undefined,
+  });
+  if (!parsed.success)
+    return (
+      <Screen>
+        <Heading title="发现经历" />
+        <Message error={parsed.error.issues[0].message} />
+        <Button onPress={() => navigate(postBrowseSchema.parse({}))}>
+          清除无效条件
+        </Button>
+      </Screen>
+    );
+  return (
+    <DiscoverResults
+      key={postBrowseParams({ ...parsed.data, page: 1 }).toString()}
+      active={parsed.data}
+    />
   );
+}
+function DiscoverResults({ active }: { active: PostBrowse }) {
+  const { colors } = useApp();
+  const [inputs, setInputs] = useState<typeof blank>({
+    q: active.q,
+    city: active.city,
+    occurredFrom: active.occurredFrom ?? "",
+    occurredTo: active.occurredTo ?? "",
+    sort: active.sort,
+    issue: active.issue ?? "",
+  });
   const [error, setError] = useState("");
+  const [revision, refresh] = useState(0);
   const posts = useResource<Page<PublicPost>>(
     `/posts?${postBrowseParams(active)}`,
+    revision,
   );
   function submit(category: Category | "" = active.category ?? "") {
     const checked = postBrowseSchema.safeParse({
@@ -56,11 +105,11 @@ export default function Discover() {
       return;
     }
     setError("");
-    setActive(checked.data);
+    navigate(checked.data);
   }
   function clear() {
     setInputs(blank);
-    setActive(postBrowseSchema.parse({}));
+    navigate(postBrowseSchema.parse({}));
     setError("");
   }
   return (
@@ -209,6 +258,7 @@ export default function Discover() {
           marginBottom: 16,
         }}
       >
+        {active.subjectId ? "已限定链接中的具体对象；清除条件可查看全部对象。" : ""}
         {active.issue ? `问题类型：${issueLabels[active.issue]}。` : ""}
         {active.occurredFrom || active.occurredTo
           ? `发生日期：${active.occurredFrom ?? "不限"} 至 ${active.occurredTo ?? "不限"}。`
@@ -230,7 +280,14 @@ export default function Discover() {
         }}
       >
         {posts.loading || posts.error ? (
-          <Message loading={posts.loading} error={posts.error} />
+          <>
+            <Message loading={posts.loading} error={posts.error} />
+            {posts.error && (
+              <Button secondary onPress={() => refresh((v) => v + 1)}>
+                重试查询
+              </Button>
+            )}
+          </>
         ) : posts.data?.items.length ? (
           posts.data.items.map((p) => <PostCard post={p} key={p.id} />)
         ) : (
@@ -242,7 +299,7 @@ export default function Discover() {
           page={active.page}
           pageSize={active.limit}
           total={posts.data.total}
-          onChange={(page) => setActive({ ...active, page })}
+          onChange={(page) => navigate({ ...active, page })}
         />
       )}
       <View style={{ paddingVertical: 30, gap: 8 }}>
