@@ -86,6 +86,7 @@ test("restores multi-select issues and publishes tag-only corrections through re
   await expect(
     page.getByRole("checkbox", { name: "收费说明", exact: true }),
   ).toBeChecked();
+  await page.getByRole("button", { name: "预览发布内容", exact: true }).click();
   await page.getByRole("button", { name: "提交审核", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "感谢你，多留一份依据。" }),

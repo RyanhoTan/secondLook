@@ -208,6 +208,28 @@ textarea {
   color: var(--muted);
   font-size: 0.8125rem;
 }
+.post-preview {
+  overflow-wrap: anywhere;
+}
+.preview-object {
+  padding: 16px 0;
+  margin: 16px 0 24px;
+  border-bottom: 1px solid var(--line);
+}
+.post-preview h3 {
+  font-size: 1.375rem;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.preview-identity {
+  margin-top: 12px;
+  font-size: 0.9375rem;
+}
+.preview-body {
+  margin: 24px 0;
+  font-size: 1rem;
+  line-height: 1.9;
+}
 .detail-page {
   max-width: 740px;
   margin: auto;

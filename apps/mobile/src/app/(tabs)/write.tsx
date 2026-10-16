@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { useDraftEditor } from "@secondlook/compose";
 import { randomUUID } from "expo-crypto";
 import { router, useLocalSearchParams } from "expo-router";
-import { Switch, Text, View } from "react-native";
+import { Keyboard, Switch, Text, View } from "react-native";
 import { categories, type Category, type Subject } from "@secondlook/contracts";
 import { useApp } from "../../lib/context";
 import { SubjectPicker } from "../../components/SubjectPicker";
 import { IssuePicker, IssueTypes } from "../../components/IssueTypes";
+import { PostPreview } from "../../components/PostPreview";
 import {
   Screen,
   Heading,
@@ -36,7 +37,7 @@ export default function Write() {
   );
 }
 function Compose({ id, fresh }: { id: string; fresh: boolean }) {
-  const { api, colors } = useApp();
+  const { api, colors, user } = useApp();
   const draft = useDraftEditor(api, id, fresh, randomUUID);
   const {
     content,
@@ -45,6 +46,7 @@ function Compose({ id, fresh }: { id: string; fresh: boolean }) {
     selectSubject: setSelected,
     done: postId,
     pending,
+    preview,
     busy,
   } = draft;
   const [creating, setCreating] = useState(false);
@@ -105,7 +107,7 @@ function Compose({ id, fresh }: { id: string; fresh: boolean }) {
       </Screen>
     );
   return (
-    <Screen>
+    <Screen key={preview && !pending ? "preview" : "compose"}>
       <Heading
         eyebrow="真实、具体，也允许有后续"
         title={creating ? "添加一个具体对象" : "记录一次经历"}
@@ -124,7 +126,7 @@ function Compose({ id, fresh }: { id: string; fresh: boolean }) {
       >
         {draft.status}。保存到本地后端账号，草稿不会公开。
       </Text>
-      {!pending && !draft.conflict && (
+      {!pending && !preview && !draft.conflict && (
         <Button
           secondary
           disabled={busy}
@@ -173,6 +175,15 @@ function Compose({ id, fresh }: { id: string; fresh: boolean }) {
         </View>
       ) : busy ? (
         <Message empty="正在保存并确认投稿，请稍候。" />
+      ) : preview ? (
+        <PostPreview
+          preview={preview}
+          nickname={user?.nickname ?? ""}
+          busy={busy}
+          conflict={draft.conflict}
+          onBack={draft.cancelPreview}
+          onSubmit={() => void draft.submit()}
+        />
       ) : creating ? (
         <>
           <Field
@@ -292,9 +303,12 @@ function Compose({ id, fresh }: { id: string; fresh: boolean }) {
           <Message empty="匿名仍保留平台账号关联。请隐藏私人信息。提交后可添加图片材料，选择公开脱敏副本或仅供审核。" />
           <Button
             disabled={busy || draft.conflict}
-            onPress={() => void draft.submit()}
+            onPress={() => {
+              Keyboard.dismiss();
+              draft.preparePreview();
+            }}
           >
-            {busy ? "正在提交…" : "提交审核"}
+            预览发布内容
           </Button>
         </>
       )}

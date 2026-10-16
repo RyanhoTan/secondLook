@@ -192,6 +192,7 @@ test("publish, moderate, follow and track a subsequent update through the browse
     );
   await page.getByLabel("确认这是我的亲身经历，并愿意补充后续。").check();
   await page.getByRole("checkbox", { name: "口味体验", exact: true }).check();
+  await page.getByRole("button", { name: "预览发布内容", exact: true }).click();
   await page.getByRole("button", { name: "提交审核", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "感谢你，多留一份依据。" }),
@@ -942,6 +943,9 @@ test("retries uncertain submissions with the same content and identifier", async
         }
       } else await route.continue();
     });
+    await page
+      .getByRole("button", { name: "预览发布内容", exact: true })
+      .click();
     await page.getByRole("button", { name: "提交审核", exact: true }).click();
     const confirmation = page.getByRole("region", { name: "确认投稿结果" });
     await expect(confirmation).toContainText(title);
@@ -1143,6 +1147,7 @@ test("reconciles a lost autosave response and restores a committed submission af
     expect(result.status()).toBe(201);
     await route.abort("failed");
   });
+  await page.getByRole("button", { name: "预览发布内容", exact: true }).click();
   await page.getByRole("button", { name: "提交审核", exact: true }).click();
   await expect(
     page.getByRole("region", { name: "确认投稿结果" }),

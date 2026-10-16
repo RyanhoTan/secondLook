@@ -9,6 +9,7 @@ import { SubjectPicker } from "../components/SubjectPicker";
 import { IssuePicker, IssueTypes } from "../components/IssueTypes";
 import { NeedLogin } from "./Account";
 import { Feedback, PageHeading } from "../components/ui";
+import { PostPreview } from "../components/PostPreview";
 export function Write() {
   const { user } = useSession();
   const [params] = useSearchParams();
@@ -25,12 +26,13 @@ export function Write() {
   );
 }
 function WriteForm({ id, fresh }: { id: string; fresh: boolean }) {
-  const { api } = useSession();
+  const { api, user } = useSession();
   const draft = useDraftEditor(api, id, fresh, newClientKey);
   const {
     content,
     edit,
     pending,
+    preview,
     busy,
     done,
     subject: selected,
@@ -40,6 +42,21 @@ function WriteForm({ id, fresh }: { id: string; fresh: boolean }) {
   const [createBusy, setCreateBusy] = useState(false);
   const [createError, setCreateError] = useState("");
   const confirmationHeading = useRef<HTMLHeadingElement>(null);
+  const previewHeading = useRef<HTMLHeadingElement>(null);
+  const titleInput = useRef<HTMLInputElement>(null);
+  const hadPreview = useRef(false);
+  useEffect(() => {
+    const target = !pending
+      ? preview
+        ? previewHeading.current
+        : hadPreview.current
+          ? titleInput.current
+          : null
+      : null;
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ block: "center" });
+    hadPreview.current = !!preview;
+  }, [preview, pending]);
   useEffect(() => {
     if (pending) confirmationHeading.current?.focus();
   }, [pending]);
@@ -111,7 +128,7 @@ function WriteForm({ id, fresh }: { id: string; fresh: boolean }) {
         <Link className="back-link" to="/my#drafts">
           查看我的草稿
         </Link>
-        {!pending && !draft.conflict && (
+        {!pending && !preview && !draft.conflict && (
           <button
             type="button"
             className="button secondary"
@@ -163,7 +180,18 @@ function WriteForm({ id, fresh }: { id: string; fresh: boolean }) {
           </button>
         </section>
       )}
-      <div hidden={!!pending}>
+      {preview && !pending && (
+        <PostPreview
+          preview={preview}
+          nickname={user?.nickname ?? ""}
+          busy={busy}
+          conflict={draft.conflict}
+          headingRef={previewHeading}
+          onBack={draft.cancelPreview}
+          onSubmit={() => void draft.submit()}
+        />
+      )}
+      <div hidden={!!pending || !!preview}>
         {creating ? (
           <form className="form-surface" onSubmit={create}>
             <h2>添加一个具体对象</h2>
@@ -209,7 +237,7 @@ function WriteForm({ id, fresh }: { id: string; fresh: boolean }) {
             className="form-surface"
             onSubmit={(e) => {
               e.preventDefault();
-              void draft.submit();
+              draft.preparePreview();
             }}
           >
             <fieldset disabled={busy} className="compose-fields">
@@ -230,6 +258,7 @@ function WriteForm({ id, fresh }: { id: string; fresh: boolean }) {
                 用一句话概括
                 <input
                   name="title"
+                  ref={titleInput}
                   value={content.title}
                   onChange={(e) => edit({ title: e.target.value })}
                   required
@@ -293,7 +322,7 @@ function WriteForm({ id, fresh }: { id: string; fresh: boolean }) {
                 className="button primary"
                 disabled={busy || draft.conflict}
               >
-                {busy ? "正在提交…" : "提交审核"}
+                预览发布内容
               </button>
             </fieldset>
           </form>

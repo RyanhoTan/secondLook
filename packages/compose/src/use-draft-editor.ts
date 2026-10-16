@@ -29,6 +29,7 @@ const contentOf = (d: DraftContent): DraftContent => ({
 const same = (a: DraftContent, b: DraftContent) =>
   JSON.stringify(contentOf(a)) === JSON.stringify(contentOf(b));
 type SaveAttempt = DraftContent & { version: number; mutationKey: string };
+export type PostPreview = { content: DraftContent; subject: Subject };
 
 // Both platforms share the save queue and submission recovery rules; views stay native.
 export function useDraftEditor(
@@ -57,6 +58,7 @@ export function useDraftEditor(
     content: DraftContent;
   } | null>(null);
   const [done, setDone] = useState("");
+  const [preview, setPreview] = useState<PostPreview | null>(null);
 
   const load = useCallback(async () => {
     const sequence = ++loadSequence.current;
@@ -73,6 +75,7 @@ export function useDraftEditor(
       setSubject(draft.subject);
       setConflict(false);
       setPending(null);
+      setPreview(null);
       setDone(draft.postId ?? "");
       setStatus("草稿已保存");
     } catch (e) {
@@ -93,6 +96,7 @@ export function useDraftEditor(
   }, [load]);
 
   const edit = useCallback((patch: Partial<DraftContent>) => {
+    setPreview(null);
     current.current = { ...current.current, ...patch };
     setContent(current.current);
     setStatus(
@@ -111,6 +115,33 @@ export function useDraftEditor(
           )
         : [],
     });
+  }
+
+  function preparePreview() {
+    if (submitting.current || conflict || pending || loading || loadError)
+      return;
+    const checked = postSchema.safeParse(current.current);
+    if (!checked.success) {
+      setError(checked.error.issues[0].message);
+      return;
+    }
+    if (
+      !subject ||
+      subject.id !== checked.data.subjectId ||
+      !issuesMatchCategory(subject.category, checked.data.issueTypes)
+    ) {
+      setError("请确认具体对象及其问题类型");
+      return;
+    }
+    const normalized = contentOf(checked.data);
+    edit(normalized);
+    setError("");
+    setPreview({ content: normalized, subject: { ...subject } });
+  }
+  function cancelPreview() {
+    if (submitting.current || pending) return;
+    setPreview(null);
+    setError("");
   }
 
   const save = useCallback(async (): Promise<PostDraft> => {
@@ -199,7 +230,13 @@ export function useDraftEditor(
 
   async function submit() {
     if (submitting.current || conflict) return;
-    const checked = postSchema.safeParse(pending?.content ?? current.current);
+    const snapshot = pending?.content ?? preview?.content;
+    if (!snapshot || (!pending && !same(snapshot, current.current))) {
+      setPreview(null);
+      setError("请先预览当前内容，再提交审核");
+      return;
+    }
+    const checked = postSchema.safeParse(snapshot);
     if (!checked.success) {
       setError(checked.error.issues[0].message);
       return;
@@ -213,6 +250,11 @@ export function useDraftEditor(
         const draft = await save();
         if (draft.postId) {
           setDone(draft.postId);
+          return;
+        }
+        if (!same(draft, snapshot)) {
+          setPreview(null);
+          setError("保存内容已有变化，请重新预览后提交");
           return;
         }
         request = { version: draft.version, content: contentOf(draft) };
@@ -260,5 +302,8 @@ export function useDraftEditor(
     save,
     submit,
     load,
+    preview,
+    preparePreview,
+    cancelPreview,
   };
 }
