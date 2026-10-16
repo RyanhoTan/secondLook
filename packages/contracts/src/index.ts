@@ -151,6 +151,48 @@ export const paginationSchema = z.object({
   city: z.string().trim().max(30).default(""),
   category: z.enum(["COMPANY", "RESTAURANT", "ATTRACTION", "OTHER"]).optional(),
 });
+export const postSortLabels = {
+  PUBLISHED_DESC: "最新发布",
+  OCCURRED_DESC: "最近发生",
+  OCCURRED_ASC: "最早发生",
+} as const;
+const optionalBrowseDate = z
+  .union([z.literal(""), z.iso.date({ error: "请输入有效日期（YYYY-MM-DD）" })])
+  .optional()
+  .transform((value) => value || undefined);
+export const postBrowseSchema = paginationSchema
+  .extend({
+    subjectId: z.string().min(1).max(128).optional(),
+    occurredFrom: optionalBrowseDate,
+    occurredTo: optionalBrowseDate,
+    sort: z
+      .enum(["PUBLISHED_DESC", "OCCURRED_DESC", "OCCURRED_ASC"])
+      .default("PUBLISHED_DESC"),
+  })
+  .refine(
+    (value) =>
+      !value.occurredFrom ||
+      !value.occurredTo ||
+      value.occurredFrom <= value.occurredTo,
+    {
+      message: "起始日期不能晚于结束日期",
+      path: ["occurredTo"],
+    },
+  );
+export type PostBrowse = z.infer<typeof postBrowseSchema>;
+export function postBrowseParams(value: PostBrowse) {
+  const params = new URLSearchParams();
+  if (value.q) params.set("q", value.q);
+  if (value.city) params.set("city", value.city);
+  if (value.category) params.set("category", value.category);
+  if (value.subjectId) params.set("subjectId", value.subjectId);
+  if (value.occurredFrom) params.set("occurredFrom", value.occurredFrom);
+  if (value.occurredTo) params.set("occurredTo", value.occurredTo);
+  if (value.sort !== "PUBLISHED_DESC") params.set("sort", value.sort);
+  if (value.page > 1) params.set("page", String(value.page));
+  if (value.limit !== 12) params.set("limit", String(value.limit));
+  return params;
+}
 export type Subject = {
   id: string;
   name: string;

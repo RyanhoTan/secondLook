@@ -3,39 +3,55 @@ import { Pressable, Text, TextInput, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   categories,
+  postBrowseSchema,
+  postBrowseParams,
+  postSortLabels,
+  type PostBrowse,
   type Category,
   type Page,
   type PublicPost,
 } from "@secondlook/contracts";
 import { useApp } from "../../lib/context";
 import { useResource } from "../../lib/resource";
-import {
-  Screen,
-  Heading,
-  PostCard,
-  Message,
-  Button,
-} from "../../components/ui";
+import { Screen, Heading, PostCard, Message } from "../../components/ui";
+import { BrowseFilters } from "../../components/BrowseFilters";
+import { Pagination } from "../../components/Pagination";
 import { SegmentedControl } from "../../components/SegmentedControl";
 export default function Discover() {
   const { colors } = useApp();
-  const [q, setQ] = useState("");
-  const [search, setSearch] = useState("");
-  const [city, setCity] = useState("");
-  const [activeCity, setActiveCity] = useState("");
-  const [category, setCategory] = useState<Category | "">("");
-  const [page, setPage] = useState(1);
-  const params = new URLSearchParams({
-    q: search,
-    city: activeCity,
-    page: String(page),
-    ...(category ? { category } : {}),
-  });
-  const posts = useResource<Page<PublicPost>>(`/posts?${params}`);
-  function submit() {
-    setSearch(q);
-    setActiveCity(city);
-    setPage(1);
+  const blank = {
+    q: "",
+    city: "",
+    occurredFrom: "",
+    occurredTo: "",
+    sort: "PUBLISHED_DESC",
+  };
+  const [inputs, setInputs] = useState(blank);
+  const [active, setActive] = useState<PostBrowse>(() =>
+    postBrowseSchema.parse({}),
+  );
+  const [error, setError] = useState("");
+  const posts = useResource<Page<PublicPost>>(
+    `/posts?${postBrowseParams(active)}`,
+  );
+  function submit(category: Category | "" = active.category ?? "") {
+    const checked = postBrowseSchema.safeParse({
+      ...active,
+      ...inputs,
+      category: category || undefined,
+      page: 1,
+    });
+    if (!checked.success) {
+      setError(checked.error.issues[0].message);
+      return;
+    }
+    setError("");
+    setActive(checked.data);
+  }
+  function clear() {
+    setInputs(blank);
+    setActive(postBrowseSchema.parse({}));
+    setError("");
   }
   return (
     <Screen>
@@ -59,16 +75,17 @@ export default function Discover() {
             accessibilityLabel="搜索对象或经历"
             placeholder="公司、餐厅、目的地…"
             placeholderTextColor={colors.muted}
-            value={q}
-            onChangeText={setQ}
+            value={inputs.q}
+            onChangeText={(q) => setInputs({ ...inputs, q })}
+            maxLength={100}
             returnKeyType="search"
-            onSubmitEditing={submit}
+            onSubmitEditing={() => submit()}
             style={{ flex: 1, color: colors.ink, fontSize: 16, minHeight: 46 }}
           />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="搜索"
-            onPress={submit}
+            onPress={() => submit()}
             style={({ pressed }) => ({
               width: 44,
               height: 44,
@@ -98,14 +115,22 @@ export default function Discover() {
             accessibilityLabel="筛选城市"
             placeholder="全国"
             placeholderTextColor={colors.muted}
-            value={city}
-            onChangeText={setCity}
+            value={inputs.city}
+            onChangeText={(city) => setInputs({ ...inputs, city })}
+            maxLength={30}
             returnKeyType="search"
-            onSubmitEditing={submit}
-            style={{ flex: 1, color: colors.ink, fontSize: 13, minHeight: 40 }}
+            onSubmitEditing={() => submit()}
+            style={{ flex: 1, color: colors.ink, fontSize: 13, minHeight: 44 }}
           />
         </View>
       </View>
+      <BrowseFilters
+        value={inputs}
+        onChange={(patch) => setInputs({ ...inputs, ...patch })}
+        onApply={() => submit()}
+        onClear={clear}
+      />
+      {error && <Message error={error} />}
       <SegmentedControl
         options={[
           { value: "", label: "全部" },
@@ -114,10 +139,9 @@ export default function Discover() {
             label,
           })),
         ]}
-        value={category}
+        value={active.category ?? ""}
         onChange={(value) => {
-          setCategory(value as Category | "");
-          setPage(1);
+          submit(value as Category | "");
         }}
       />
       <View
@@ -127,21 +151,42 @@ export default function Discover() {
           justifyContent: "space-between",
           marginTop: 10,
           marginBottom: 16,
+          flexWrap: "wrap",
+          gap: 12,
         }}
       >
         <Text
           accessibilityRole="header"
           style={{ fontSize: 17, fontWeight: "600", color: colors.ink }}
         >
-          最新经历{" "}
+          {active.q
+            ? "搜索结果"
+            : active.sort === "PUBLISHED_DESC"
+              ? "最新经历"
+              : "经历列表"}{" "}
           <Text
             style={{ fontSize: 12, fontWeight: "400", color: colors.muted }}
           >
             {posts.data?.total ?? "—"}
           </Text>
         </Text>
-        <Text style={{ fontSize: 12, color: colors.muted }}>按发布时间</Text>
+        <Text style={{ fontSize: 13, color: colors.muted }}>
+          {postSortLabels[active.sort]}
+        </Text>
       </View>
+      <Text
+        style={{
+          color: colors.muted,
+          fontSize: 13,
+          lineHeight: 24,
+          marginBottom: 16,
+        }}
+      >
+        {active.occurredFrom || active.occurredTo
+          ? `发生日期：${active.occurredFrom ?? "不限"} 至 ${active.occurredTo ?? "不限"}。`
+          : ""}
+        仅统计当前范围内已公开的经历，不代表对象整体评价。
+      </Text>
       <View
         style={{
           borderRadius: 24,
@@ -159,19 +204,13 @@ export default function Discover() {
           <Message empty="没有找到相关经历，试试其他关键词。" />
         )}
       </View>
-      {posts.data && posts.data.total > 12 && (
-        <View style={{ gap: 10, marginTop: 20 }}>
-          {page > 1 && (
-            <Button secondary onPress={() => setPage((p) => p - 1)}>
-              上一页
-            </Button>
-          )}
-          {page * 12 < posts.data.total && (
-            <Button secondary onPress={() => setPage((p) => p + 1)}>
-              下一页
-            </Button>
-          )}
-        </View>
+      {posts.data && (
+        <Pagination
+          page={active.page}
+          pageSize={active.limit}
+          total={posts.data.total}
+          onChange={(page) => setActive({ ...active, page })}
+        />
       )}
       <View style={{ paddingVertical: 30, gap: 8 }}>
         <Text style={{ fontSize: 13, color: colors.muted, lineHeight: 24 }}>

@@ -1,5 +1,10 @@
 import type { Database } from "./db.js";
-import type { Category, EvidenceLevel } from "@secondlook/contracts";
+import type {
+  Category,
+  EvidenceLevel,
+  PostBrowse,
+} from "@secondlook/contracts";
+import type { Prisma } from "./generated/prisma/client.js";
 import { HttpError } from "./http.js";
 const subjectCount = { posts: { where: { status: "PUBLISHED" } } } as const;
 export const subjectInclude = { _count: { select: subjectCount } };
@@ -79,6 +84,72 @@ export async function publishedPost(db: Pick<Database, "post">, id: string) {
   });
   if (!post) throw new HttpError(404, "记录不存在或尚未公开");
   return post;
+}
+export async function searchPosts(db: Database, query: PostBrowse) {
+  const {
+    q,
+    category,
+    city,
+    subjectId,
+    occurredFrom,
+    occurredTo,
+    sort,
+    page,
+    limit,
+  } = query;
+  const where: Prisma.PostWhereInput = {
+    status: "PUBLISHED",
+    ...(subjectId ? { subjectId } : {}),
+    ...(category || city
+      ? {
+          subject: {
+            ...(category ? { category } : {}),
+            ...(city ? { city: { contains: city } } : {}),
+          },
+        }
+      : {}),
+    ...(occurredFrom || occurredTo
+      ? {
+          occurredOn: {
+            ...(occurredFrom ? { gte: occurredFrom } : {}),
+            ...(occurredTo ? { lte: occurredTo } : {}),
+          },
+        }
+      : {}),
+    ...(q
+      ? {
+          OR: [
+            { title: { contains: q } },
+            { body: { contains: q } },
+            { subject: { name: { contains: q } } },
+            { subject: { address: { contains: q } } },
+          ],
+        }
+      : {}),
+  };
+  const orderBy: Prisma.PostOrderByWithRelationInput[] = [
+    ...(sort === "PUBLISHED_DESC"
+      ? []
+      : [
+          {
+            occurredOn:
+              sort === "OCCURRED_ASC" ? ("asc" as const) : ("desc" as const),
+          },
+        ]),
+    { publishedAt: "desc" },
+    { id: "desc" },
+  ];
+  const [items, total] = await db.$transaction([
+    db.post.findMany({
+      where,
+      include: postInclude,
+      orderBy,
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    db.post.count({ where }),
+  ]);
+  return { items: items.map(publicPost), total, page };
 }
 export async function reviewItem(
   db: Database,

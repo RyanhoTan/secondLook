@@ -1157,3 +1157,219 @@ test("reconciles a lost autosave response and restores a committed submission af
     posts.items.filter((p: { title: string }) => p.title === title),
   ).toHaveLength(1);
 });
+
+test("shares date filters and sorting through URLs, pagination and browser history", async ({
+  page,
+}) => {
+  const account = await (
+    await page.request.post("/api/v1/auth/register", {
+      data: {
+        username: `date_filter_${Date.now()}`,
+        nickname: "日期筛选测试作者",
+        password: "test-only-date-2026",
+      },
+    })
+  ).json();
+  const admin = await (
+    await page.request.post("/api/v1/auth/login", {
+      data: { username: "admin", password: "test-only-admin-2026" },
+    })
+  ).json();
+  const headers = { Authorization: `Bearer ${account.token}` };
+  const subjects: string[] = [];
+  for (const [city, category] of [
+    ["杭州", "RESTAURANT"],
+    ["上海", "RESTAURANT"],
+    ["杭州", "COMPANY"],
+  ]) {
+    subjects.push(
+      (
+        await (
+          await page.request.post("/api/v1/subjects", {
+            headers,
+            data: {
+              name: `日期筛选虚构对象-${city}-${category}`,
+              city,
+              category,
+              address: "虚构日期路 66 号",
+            },
+          })
+        ).json()
+      ).id,
+    );
+  }
+  for (const [index, day, label] of [
+    [0, "01", "第一天"],
+    [0, "02", "第二天"],
+    [0, "03", "第三天"],
+    [1, "02", "上海对象"],
+    [2, "02", "公司对象"],
+  ] as const) {
+    const post = await (
+      await page.request.post("/api/v1/posts", {
+        headers,
+        data: {
+          subjectId: subjects[index],
+          clientKey: randomUUID(),
+          title: `日期浏览虚构：${label}`,
+          body: "这是日期浏览虚构测试，发生日期与发布时间不同；所有对象和经过均为虚构样本。",
+          occurredOn: `2026-09-${day}`,
+          anonymous: true,
+          personalExperience: true,
+        },
+      })
+    ).json();
+    expect(
+      (
+        await page.request.post(
+          `/api/v1/admin/reviews/POST/${post.id}/decision`,
+          {
+            headers: { Authorization: `Bearer ${admin.token}` },
+            data: { action: "APPROVE", reason: "虚构日期样本审核通过" },
+          },
+        )
+      ).status(),
+    ).toBe(204);
+  }
+  const query =
+    "q=日期浏览虚构&city=杭州&category=RESTAURANT&occurredFrom=2026-09-01&occurredTo=2026-09-03&sort=OCCURRED_ASC&limit=1";
+  await page.goto(`/?${query}`);
+  await expect(page.locator(".post-card")).toHaveCount(1);
+  await expect(page.locator(".post-card")).toContainText("第一天");
+  const pager = page.getByRole("navigation", { name: "经历分页" });
+  await pager.getByRole("button", { name: "下一页" }).click();
+  await expect(page.locator(".post-card")).toContainText("第二天");
+  await page.reload();
+  await expect(pager.getByRole("status")).toHaveText("第 2 / 3 页");
+  await page.getByText("时间与排序", { exact: true }).click();
+  await expect(page.getByLabel("发生日期从", { exact: true })).toHaveValue(
+    "2026-09-01",
+  );
+  await expect(page.getByLabel("发生日期至", { exact: true })).toHaveValue(
+    "2026-09-03",
+  );
+  await page
+    .getByRole("combobox", { name: "排序方式", exact: true })
+    .selectOption("OCCURRED_DESC");
+  await page.getByRole("button", { name: "应用筛选" }).click();
+  await expect(page.locator(".post-card")).toContainText("第三天");
+  expect(new URL(page.url()).searchParams.has("page")).toBe(false);
+  await page.goBack();
+  await expect(page.locator(".post-card")).toContainText("第二天");
+  await expect(
+    page.getByRole("combobox", { name: "排序方式", exact: true }),
+  ).toHaveValue("OCCURRED_ASC");
+  await page.goForward();
+  await expect(page.locator(".post-card")).toContainText("第三天");
+  await page.getByLabel("发生日期从", { exact: true }).fill("2026-09-02");
+  await page.getByLabel("发生日期至", { exact: true }).fill("2026-09-02");
+  await page.getByRole("button", { name: "应用筛选" }).click();
+  await expect(page.locator(".post-card")).toContainText("第二天");
+  await expect(page.locator(".feed-heading h2 span")).toHaveText("1");
+  await expect(page.locator(".browse-sample")).toContainText(
+    "2026-09-02 至 2026-09-02",
+  );
+  const validUrl = page.url();
+  await page.getByLabel("发生日期从", { exact: true }).fill("2026-09-03");
+  await page.getByRole("button", { name: "应用筛选" }).click();
+  await expect(page.getByRole("alert")).toHaveText("起始日期不能晚于结束日期");
+  expect(page.url()).toBe(validUrl);
+  await page.getByRole("button", { name: "清除筛选" }).click();
+  await expect(
+    page.getByRole("button", { name: "全部经历", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("搜索公司、饭店、景点或经历")).toHaveValue("");
+  expect(new URL(page.url()).search).toBe("");
+  await page.goBack();
+  await expect(page.getByLabel("发生日期从", { exact: true })).toHaveValue(
+    "2026-09-02",
+  );
+  await expect(page.locator(".post-card")).toContainText("第二天");
+});
+
+test("keeps expanded browse filters readable and rejects invalid shared dates", async ({
+  page,
+}) => {
+  await page.goto("/?occurredFrom=2026-02-30");
+  await expect(page.locator(".experience-section .error")).toContainText(
+    "请输入有效日期",
+  );
+  await page.getByText("时间与排序", { exact: true }).click();
+  await page.getByRole("button", { name: "清除筛选" }).click();
+  await expect(page.locator(".post-card").first()).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "200%";
+  });
+  for (const theme of ["浅色模式", "深色模式"]) {
+    await chooseTheme(page, theme);
+    for (const label of ["发生日期从", "发生日期至", "排序方式"]) {
+      const control =
+        label === "排序方式"
+          ? page.getByRole("combobox", { name: label, exact: true })
+          : page.getByLabel(label, { exact: true });
+      const box = await control.boundingBox();
+      expect(box?.height).toBeGreaterThanOrEqual(44);
+      await control.focus();
+      await expect(control).toBeFocused();
+    }
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    ).toBe(true);
+    const contrasts = await page
+      .locator(".browse-filter-fields")
+      .evaluate((container) => {
+        const luminance = (color: string) => {
+          const rgb = color
+            .match(/[\d.]+/g)!
+            .slice(0, 3)
+            .map((value) => Number(value) / 255)
+            .map((value) =>
+              value <= 0.04045
+                ? value / 12.92
+                : ((value + 0.055) / 1.055) ** 2.4,
+            );
+          return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+        };
+        const ratio = (foreground: string, background: string) => {
+          const a = luminance(foreground),
+            b = luminance(background);
+          return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+        };
+        return Array.from(container.querySelectorAll("input, select")).flatMap(
+          (control) => {
+            const style = getComputedStyle(control),
+              label = getComputedStyle(control.parentElement!);
+            return [
+              ratio(style.color, style.backgroundColor),
+              ratio(
+                label.color,
+                getComputedStyle(document.documentElement).backgroundColor,
+              ),
+            ];
+          },
+        );
+      });
+    expect(Math.min(...contrasts)).toBeGreaterThanOrEqual(4.5);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.locator(".browse-filter-fields").screenshot({
+      path: `test-results/browse-controls-${theme === "浅色模式" ? "light" : "dark"}.png`,
+    });
+    for (const name of ["应用筛选", "清除筛选"]) {
+      const action = page.getByRole("button", { name, exact: true });
+      expect((await action.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+      await action.click();
+    }
+    await page
+      .locator(".browse-filters .form-actions")
+      .screenshot({
+        path: `test-results/browse-actions-${theme === "浅色模式" ? "light" : "dark"}.png`,
+      });
+    await page.screenshot({
+      path: `test-results/browse-filters-${theme === "浅色模式" ? "light" : "dark"}.png`,
+      fullPage: true,
+    });
+  }
+});

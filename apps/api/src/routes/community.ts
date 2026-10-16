@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   paginationSchema,
+  postBrowseSchema,
   postSubmissionSchema,
   subjectSchema,
   updateSchema,
@@ -20,6 +21,7 @@ import {
   publicSubject,
   publishedPost,
   subjectInclude,
+  searchPosts,
 } from "../posts.js";
 export function communityRoutes(db: Database) {
   const router = Router();
@@ -64,43 +66,7 @@ export function communityRoutes(db: Database) {
     res.status(201).json(publicSubject(await db.subject.create({ data })));
   });
   router.get("/posts", async (req, res) => {
-    const { q, category, city, page, limit } = paginationSchema.parse(
-      req.query,
-    );
-    const subjectId =
-      typeof req.query.subjectId === "string" ? req.query.subjectId : undefined;
-    const where = {
-      status: "PUBLISHED",
-      ...(subjectId ? { subjectId } : {}),
-      ...(category || city
-        ? {
-            subject: {
-              ...(category ? { category } : {}),
-              ...(city ? { city: { contains: city } } : {}),
-            },
-          }
-        : {}),
-      ...(q
-        ? {
-            OR: [
-              { title: { contains: q } },
-              { body: { contains: q } },
-              { subject: { name: { contains: q } } },
-            ],
-          }
-        : {}),
-    };
-    const [items, total] = await db.$transaction([
-      db.post.findMany({
-        where,
-        include: postInclude,
-        orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      db.post.count({ where }),
-    ]);
-    res.json({ items: items.map(publicPost), total, page });
+    res.json(await searchPosts(db, postBrowseSchema.parse(req.query)));
   });
   router.get("/posts/:id", authenticate(db), async (req, res) => {
     const payload = await db.$transaction(async (tx) => {
