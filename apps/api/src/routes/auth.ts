@@ -11,6 +11,10 @@ import {
 import { HttpError } from "../http.js";
 export function authRoutes(db: Database) {
   const router = Router();
+  router.use("/auth", (_req, res, next) => {
+    res.set("Cache-Control", "private, no-store");
+    next();
+  });
   router.post("/auth/register", async (req, res) => {
     const data = registerSchema.parse(req.body);
     const user = await db.user.create({

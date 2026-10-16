@@ -36,13 +36,14 @@ export async function issueSession(db: Database, userId: string) {
 export function authenticate(db: Database, required = false): RequestHandler {
   return async (req, res, next) => {
     const header = req.get("Authorization");
+    if (header || required) res.set("Cache-Control", "private, no-store");
     if (header) {
       const token = header.startsWith("Bearer ") ? header.slice(7) : "";
       const session = await db.session.findUnique({
         where: { tokenHash: tokenHash(token) },
         include: { user: true },
       });
-      if (!session || session.expiresAt < new Date())
+      if (!session || session.expiresAt.getTime() <= Date.now())
         throw new HttpError(401, "登录已过期，请重新登录");
       res.locals.user = {
         id: session.user.id,
