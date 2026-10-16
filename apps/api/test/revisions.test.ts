@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   beforeAll,
   beforeEach,
@@ -76,7 +77,7 @@ beforeEach(async () => {
   const created = await request(app)
     .post("/api/v1/posts")
     .set(auth(author))
-    .send({ ...original, subjectId });
+    .send({ ...original, clientKey: randomUUID(), subjectId });
   postId = created.body.id;
   expect((await decide("POST", postId, "APPROVE")).status).toBe(204);
   await request(app).put(`/api/v1/posts/${postId}/follow`).set(auth(reader));

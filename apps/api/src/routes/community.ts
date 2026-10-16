@@ -1,13 +1,14 @@
 import { Router } from "express";
 import {
   paginationSchema,
-  postSchema,
+  postSubmissionSchema,
   subjectSchema,
   updateSchema,
 } from "@secondlook/contracts";
 import type { Database } from "../db.js";
 import { authenticate } from "../auth.js";
 import { HttpError } from "../http.js";
+import { submitPost } from "../submissions.js";
 import {
   publicEventText,
   publicRevision,
@@ -137,13 +138,12 @@ export function communityRoutes(db: Database) {
     res.json(payload);
   });
   router.post("/posts", authenticate(db, true), async (req, res) => {
-    const { personalExperience, ...data } = postSchema.parse(req.body);
-    if (!(await db.subject.findUnique({ where: { id: data.subjectId } })))
-      throw new HttpError(404, "请先选择有效对象");
-    const post = await db.post.create({
-      data: { ...data, authorId: res.locals.user.id },
-    });
-    res.status(201).json({ id: post.id, status: post.status });
+    const post = await submitPost(
+      db,
+      res.locals.user.id,
+      postSubmissionSchema.parse(req.body),
+    );
+    res.status(201).json(post);
   });
   router.post(
     "/posts/:id/updates",

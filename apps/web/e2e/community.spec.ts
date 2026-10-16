@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 async function chooseTheme(page: Page, label: string) {
   await page.getByRole("button", { name: /^外观：/ }).click();
@@ -295,6 +296,7 @@ test("review corrections without leaking pending text and retain safe version hi
       occurredOn: "2026-01-01",
       anonymous: true,
       personalExperience: true,
+      clientKey: randomUUID(),
     },
   });
   const { id } = await createdPost.json();
@@ -430,6 +432,7 @@ test("upload and redact materials with private-only review and withdrawal", asyn
       occurredOn: "2026-01-01",
       anonymous: true,
       personalExperience: true,
+      clientKey: randomUUID(),
     },
   });
   const { id } = await created.json();
@@ -667,6 +670,7 @@ test("search past fifty objects and page personal and subject records without lo
           occurredOn: "2026-01-01",
           anonymous: true,
           personalExperience: true,
+          clientKey: randomUUID(),
         },
       })
     ).json();
@@ -764,6 +768,7 @@ test("reassess materials for corrected text while retaining historical approvals
         occurredOn: "2026-01-01",
         anonymous: true,
         personalExperience: true,
+        clientKey: randomUUID(),
       },
     })
   ).json();
@@ -782,13 +787,11 @@ test("reassess materials for corrected text while retaining historical approvals
   await page
     .getByRole("link", { name: "添加 / 管理图片材料", exact: true })
     .click();
-  await page
-    .getByLabel("选择图片", { exact: true })
-    .setInputFiles({
-      name: "version.png",
-      mimeType: "image/png",
-      buffer: Buffer.from(image.split(",")[1], "base64"),
-    });
+  await page.getByLabel("选择图片", { exact: true }).setInputFiles({
+    name: "version.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(image.split(",")[1], "base64"),
+  });
   await page
     .getByLabel("来源与关联说明")
     .fill("版本关联测试：这份虚构材料需要针对正文重新核对。");
@@ -885,5 +888,107 @@ test("reassess materials for corrected text while retaining historical approvals
     });
   } finally {
     await context.close();
+  }
+});
+
+test("retries uncertain submissions with the same content and identifier", async ({
+  page,
+}) => {
+  const username = `retry_${Date.now()}`,
+    password = "test-only-retry-2026";
+  const account = await (
+    await page.request.post("/api/v1/auth/register", {
+      data: { username, password, nickname: "投稿重试测试作者" },
+    })
+  ).json();
+  await login(page, username, password);
+  for (const committed of [true, false]) {
+    await page.getByRole("link", { name: "记录一次经历", exact: true }).click();
+    await page.getByLabel("搜索对象名称或门店地址").fill("山间面馆");
+    await page.getByRole("button", { name: "查找对象", exact: true }).click();
+    await page.getByLabel("选择对象").selectOption("demo-noodle");
+    const title = `投稿重试：${committed ? "保存后丢失响应" : "保存前服务失败"}`;
+    await page.getByLabel("用一句话概括").fill(title);
+    await page.getByLabel("发生日期").fill("2026-01-01");
+    await page
+      .getByLabel("说说你的亲身经历")
+      .fill("这是一条用于网络失败重试验证的虚构经历，重试不能产生第二条投稿。");
+    await page.getByLabel("确认这是我的亲身经历，并愿意补充后续。").check();
+    const requests: object[] = [];
+    let firstId = "";
+    await page.route("**/api/v1/posts", async (route) => {
+      if (route.request().method() !== "POST") return route.continue();
+      requests.push(route.request().postDataJSON());
+      if (requests.length === 1) {
+        if (committed) {
+          const response = await route.fetch();
+          expect(response.status()).toBe(201);
+          firstId = (await response.json()).id;
+          await route.abort("failed");
+        } else {
+          await route.fulfill({
+            status: 503,
+            contentType: "application/json",
+            body: JSON.stringify({ message: "测试服务暂时不可用" }),
+          });
+        }
+      } else await route.continue();
+    });
+    await page.getByRole("button", { name: "提交审核", exact: true }).click();
+    const confirmation = page.getByRole("region", { name: "确认投稿结果" });
+    await expect(confirmation).toContainText(title);
+    await expect(confirmation).toContainText("尚未确认提交结果");
+    await expect(page.getByLabel("用一句话概括")).not.toBeVisible();
+    const before = await (
+      await page.request.get("/api/v1/me/posts", {
+        headers: { Authorization: `Bearer ${account.token}` },
+      })
+    ).json();
+    expect(
+      before.items.filter((p: { title: string }) => p.title === title),
+    ).toHaveLength(committed ? 1 : 0);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    ).toBe(true);
+    await chooseTheme(page, "深色模式");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const brandLayout = await page
+      .locator(".brand > span:last-child")
+      .evaluate((element) => ({
+        height: element.getBoundingClientRect().height,
+        lineHeight: parseFloat(getComputedStyle(element).lineHeight),
+      }));
+    expect(brandLayout.height).toBeLessThanOrEqual(brandLayout.lineHeight + 1);
+    await page.screenshot({
+      path: `test-results/submission-retry-${committed ? "committed" : "uncommitted"}.png`,
+      fullPage: true,
+    });
+    await confirmation.getByRole("button", { name: "重试并确认结果" }).click();
+    await expect(
+      page.getByRole("heading", { name: "感谢你，多留一份依据。" }),
+    ).toBeVisible();
+    expect(requests).toHaveLength(2);
+    expect(requests[1]).toEqual(requests[0]);
+    const after = await (
+      await page.request.get("/api/v1/me/posts", {
+        headers: { Authorization: `Bearer ${account.token}` },
+      })
+    ).json();
+    const own = after.items.filter((p: { title: string }) => p.title === title);
+    expect(own).toHaveLength(1);
+    if (committed) expect(own[0].id).toBe(firstId);
+    await page.unroute("**/api/v1/posts");
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "";
+    });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await chooseTheme(page, "浅色模式");
+    await page.getByRole("link", { name: "查看我的记录", exact: true }).click();
   }
 });

@@ -47,6 +47,8 @@ export const updateSchema = z.object({
   title: z.string().trim().min(2).max(80),
   body: z.string().trim().min(10).max(5000),
 });
+export const postSubmissionSchema = postSchema.extend({ clientKey: z.uuid() });
+export type PostSubmission = z.infer<typeof postSubmissionSchema>;
 export const revisionSchema = postSchema
   .pick({
     title: true,

@@ -75,6 +75,7 @@ beforeEach(async () => {
   authorId = user.id;
   author = await issueSession(db, user.id);
   const post = await request(app).post("/api/v1/posts").set(auth(author)).send({
+    clientKey: randomUUID(),
     subjectId,
     title: "材料测试：完全虚构的亲历",
     body: "这是用于图片材料权限、审核与脱敏测试的虚构内容，不涉及真实单位或个人。",
@@ -490,6 +491,7 @@ describe("private originals, reviewed copies and upload recovery", () => {
       .post("/api/v1/posts")
       .set(auth(author))
       .send({
+        clientKey: randomUUID(),
         subjectId,
         title: "这条待审记录有图片",
         body: "这是一条用于验证先上传材料、后公开正文的虚构经历，还没有通过正文审核。",

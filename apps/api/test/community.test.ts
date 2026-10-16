@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -118,7 +119,7 @@ describe("local community workflow and privacy boundaries", () => {
           await request(app)
             .post("/api/v1/posts")
             .set(auth(authorToken))
-            .send({ ...draft, subjectId, ...patch })
+            .send({ ...draft, clientKey: randomUUID(), subjectId, ...patch })
         ).status,
       ).toBe(400);
     expect((await request(app).get("/api/v1/posts?limit=10000")).status).toBe(
@@ -129,7 +130,7 @@ describe("local community workflow and privacy boundaries", () => {
     const created = await request(app)
       .post("/api/v1/posts")
       .set(auth(authorToken))
-      .send({ ...draft, subjectId });
+      .send({ ...draft, clientKey: randomUUID(), subjectId });
     expect(created.status).toBe(201);
     postId = created.body.id;
     expect((await request(app).get("/api/v1/posts")).body.total).toBe(0);
@@ -282,7 +283,12 @@ describe("local community workflow and privacy boundaries", () => {
     const created = await request(app)
       .post("/api/v1/posts")
       .set(auth(authorToken))
-      .send({ ...draft, subjectId, title: "这条内容被拒绝公开" });
+      .send({
+        ...draft,
+        clientKey: randomUUID(),
+        subjectId,
+        title: "这条内容被拒绝公开",
+      });
     await request(app)
       .post(`/api/v1/admin/reviews/POST/${created.body.id}/decision`)
       .set(auth(adminToken))

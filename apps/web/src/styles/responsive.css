@@ -45,6 +45,7 @@
   .header-inner {
     min-height: 76px;
     padding: 14px 24px;
+    flex-wrap: wrap;
   }
   .brand {
     font-size: 1.1875rem;
@@ -56,6 +57,7 @@
   }
   .header-actions {
     flex-shrink: 0;
+    margin-left: auto;
   }
   .main-nav {
     display: none;

@@ -51,6 +51,8 @@ model Post {
   createdAt DateTime @default(now())
   publishedAt DateTime?
   currentVersion Int @default(1)
+  submissionKey String?
+  submissionDigest String?
   revisions PostRevision[]
   updates ProgressUpdate[]
   follows Follow[]
@@ -58,6 +60,7 @@ model Post {
   materials Material[]
   @@index([status,publishedAt])
   @@index([subjectId,status])
+  @@unique([authorId,submissionKey])
 }
 model PostRevision {
   id String @id @default(cuid())

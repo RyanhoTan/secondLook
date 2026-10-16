@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { randomUUID } from "expo-crypto";
 import { router } from "expo-router";
 import { Switch, Text, View } from "react-native";
 import {
@@ -6,7 +7,9 @@ import {
   postSchema,
   type Category,
   type Subject,
+  type PostSubmission,
 } from "@secondlook/contracts";
+import { ApiError } from "@secondlook/contracts/client";
 import { useApp } from "../../lib/context";
 import { SubjectPicker } from "../../components/SubjectPicker";
 import {
@@ -38,6 +41,8 @@ function Compose() {
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [postId, setPostId] = useState("");
+  const [pending, setPending] = useState<PostSubmission | null>(null);
+  const submitting = useRef(false);
   async function create() {
     setBusy(true);
     setError("");
@@ -55,6 +60,7 @@ function Compose() {
     }
   }
   async function submit() {
+    if (submitting.current || busy) return;
     const checked = postSchema.safeParse({
       subjectId: selected?.id ?? "",
       title,
@@ -67,18 +73,36 @@ function Compose() {
       setError(checked.error.issues[0].message);
       return;
     }
+    await send({ ...checked.data, clientKey: randomUUID() });
+  }
+  async function send(data: PostSubmission) {
+    if (submitting.current) return;
+    submitting.current = true;
+    setPending(data);
     setBusy(true);
     setError("");
     try {
       const post = await api<{ id: string }>("/posts", {
         method: "POST",
-        body: JSON.stringify(checked.data),
+        body: JSON.stringify(data),
       });
       setPostId(post.id);
       setDone(true);
     } catch (e) {
-      setError((e as Error).message);
+      setError(
+        e instanceof ApiError
+          ? e.message
+          : "连接中断，尚未确认投稿结果，请重试确认。",
+      );
+      if (
+        e instanceof ApiError &&
+        e.status >= 400 &&
+        e.status < 500 &&
+        ![408, 409].includes(e.status)
+      )
+        setPending(null);
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }
@@ -87,7 +111,7 @@ function Compose() {
       <Screen>
         <Heading
           title="感谢你，多留一份依据。"
-          description="投稿正在等待审核。通过后才会公开，可以在“我的记录”查看状态。"
+          description="本次投稿已确认。可以在“我的记录”查看当前审核状态；通过审核后才会公开。"
         />
         <View style={{ marginBottom: 16 }}>
           <Button secondary onPress={() => router.push(`/materials/${postId}`)}>
@@ -97,6 +121,7 @@ function Compose() {
         <Button
           onPress={() => {
             setDone(false);
+            setPending(null);
             setTitle("");
             setBody("");
             setDate("");
@@ -115,7 +140,33 @@ function Compose() {
         title={creating ? "添加一个具体对象" : "记录一次经历"}
       />
       {error && <Message error={error} />}{" "}
-      {creating ? (
+      {pending ? (
+        <View style={{ gap: 16 }}>
+          <Text
+            accessibilityRole="header"
+            style={{ color: colors.ink, fontSize: 20, fontWeight: "600" }}
+          >
+            {pending.title}
+          </Text>
+          <Text style={{ color: colors.muted, fontSize: 14, lineHeight: 24 }}>
+            {selected?.name} · {pending.occurredOn} ·{" "}
+            {pending.anonymous ? "匿名亲历者" : "使用昵称"}
+          </Text>
+          <Text style={{ color: colors.ink, fontSize: 16, lineHeight: 28 }}>
+            {pending.body}
+          </Text>
+          <Message
+            empty={
+              busy
+                ? "正在确认投稿，请稍候。"
+                : "尚未确认提交结果。重试会核对同一份投稿，不会重复创建；请先确认结果再编辑或提交新的经历。"
+            }
+          />
+          <Button disabled={busy} onPress={() => void send(pending)}>
+            {busy ? "正在确认…" : "重试并确认结果"}
+          </Button>
+        </View>
+      ) : creating ? (
         <>
           <Field
             label="名称"
@@ -223,7 +274,7 @@ function Compose() {
               trackColor={{ true: colors.accent }}
             />
           </View>
-          <Message empty="匿名仍保留平台账号关联。请隐藏私人信息。当前先支持文字投稿，图片与佐证会在后续加入。" />
+          <Message empty="匿名仍保留平台账号关联。请隐藏私人信息。提交后可添加图片材料，选择公开脱敏副本或仅供审核。" />
           <Button disabled={busy} onPress={() => void submit()}>
             {busy ? "正在提交…" : "提交审核"}
           </Button>

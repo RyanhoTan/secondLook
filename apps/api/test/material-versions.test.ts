@@ -61,6 +61,7 @@ beforeAll(async () => {
 }, 30000);
 beforeEach(async () => {
   const post = await request(app).post("/api/v1/posts").set(auth(author)).send({
+    clientKey: randomUUID(),
     subjectId,
     title: "版本材料：虚构的原始经历",
     body: "这是一条用于版本材料关联验证的虚构经历，初始描述仅适用于第一版正文。",
