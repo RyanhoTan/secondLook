@@ -56,6 +56,30 @@
   display: grid;
   gap: 24px;
 }
+.compose-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  display: grid;
+  gap: 24px;
+}
+.draft-actions {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.draft-list {
+  display: grid;
+  gap: 18px;
+  padding-bottom: 32px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--line);
+}
+.draft-list article {
+  display: grid;
+  gap: 10px;
+}
 .form-surface > h2 {
   font-size: 1.25rem;
   letter-spacing: -0.03em;

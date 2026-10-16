@@ -16,6 +16,7 @@ model User {
   follows Follow[]
   notifications Notification[]
   materials Material[]
+  drafts PostDraft[]
 }
 model Session {
   id String @id @default(cuid())
@@ -32,6 +33,7 @@ model Subject {
   address String @default("")
   createdAt DateTime @default(now())
   posts Post[]
+  drafts PostDraft[]
   @@unique([name,category,city,address])
 }
 model Post {
@@ -58,9 +60,29 @@ model Post {
   follows Follow[]
   events TimelineEvent[]
   materials Material[]
+  draft PostDraft?
   @@index([status,publishedAt])
   @@index([subjectId,status])
   @@unique([authorId,submissionKey])
+}
+model PostDraft {
+  id String @id
+  authorId String
+  author User @relation(fields:[authorId],references:[id])
+  subjectId String?
+  subject Subject? @relation(fields:[subjectId],references:[id])
+  title String
+  body String
+  occurredOn String
+  anonymous Boolean
+  personalExperience Boolean
+  version Int @default(1)
+  mutationKey String
+  postId String? @unique
+  post Post? @relation(fields:[postId],references:[id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([authorId,updatedAt])
 }
 model PostRevision {
   id String @id @default(cuid())

@@ -10,7 +10,14 @@ import { revisionRoutes } from "./routes/revisions.js";
 import { materialRoutes } from "./routes/materials.js";
 import { MaterialFiles } from "./material-files.js";
 import { errorHandler } from "./http.js";
-export function createApp(db: Database, options: { uploadRoot?: string } = {}) {
+import { draftRoutes } from "./routes/drafts.js";
+export function createApp(
+  db: Database,
+  options: { uploadRoot?: string; authLimit?: number } = {},
+) {
+  const authLimit = options.authLimit ?? 20;
+  if (!Number.isInteger(authLimit) || authLimit < 1 || authLimit > 1000)
+    throw new Error("AUTH_RATE_LIMIT 必须为 1～1000 的整数");
   const app = express();
   app.disable("x-powered-by");
   app.use(helmet());
@@ -27,15 +34,23 @@ export function createApp(db: Database, options: { uploadRoot?: string } = {}) {
     "/api/v1/auth",
     rateLimit({
       windowMs: 60000,
-      limit: 20,
+      limit: authLimit,
       standardHeaders: "draft-8",
       legacyHeaders: false,
+      handler: (_req, res) =>
+        res
+          .status(429)
+          .json({
+            code: "RATE_LIMIT",
+            message: "登录请求过于频繁，请稍后重试",
+          }),
     }),
   );
   app.use(
     "/api/v1",
     authRoutes(db),
     communityRoutes(db),
+    draftRoutes(db),
     revisionRoutes(db),
     materialRoutes(db, new MaterialFiles(options.uploadRoot)),
     adminRoutes(db),

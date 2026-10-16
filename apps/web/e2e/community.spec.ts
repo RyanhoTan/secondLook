@@ -916,7 +916,7 @@ test("retries uncertain submissions with the same content and identifier", async
     await page.getByLabel("确认这是我的亲身经历，并愿意补充后续。").check();
     const requests: object[] = [];
     let firstId = "";
-    await page.route("**/api/v1/posts", async (route) => {
+    await page.route("**/api/v1/me/drafts/*/submit", async (route) => {
       if (route.request().method() !== "POST") return route.continue();
       requests.push(route.request().postDataJSON());
       if (requests.length === 1) {
@@ -983,7 +983,7 @@ test("retries uncertain submissions with the same content and identifier", async
     const own = after.items.filter((p: { title: string }) => p.title === title);
     expect(own).toHaveLength(1);
     if (committed) expect(own[0].id).toBe(firstId);
-    await page.unroute("**/api/v1/posts");
+    await page.unroute("**/api/v1/me/drafts/*/submit");
     await page.evaluate(() => {
       document.documentElement.style.fontSize = "";
     });
@@ -991,4 +991,169 @@ test("retries uncertain submissions with the same content and identifier", async
     await chooseTheme(page, "浅色模式");
     await page.getByRole("link", { name: "查看我的记录", exact: true }).click();
   }
+});
+
+test("restores private drafts after login and detects concurrent edits without overwriting", async ({
+  page,
+  browser,
+}) => {
+  const username = `draft_${Date.now()}`,
+    password = "test-only-draft-2026";
+  await page.request.post("/api/v1/auth/register", {
+    data: { username, password, nickname: "草稿恢复测试作者" },
+  });
+  await login(page, username, password);
+  await page.getByRole("link", { name: "记录一次经历", exact: true }).click();
+  const title = "浏览器草稿恢复：尚未写完的虚构经历";
+  await page.getByLabel("用一句话概括").fill(title);
+  await page.getByLabel("说说你的亲身经历").fill("还没有写完的正文");
+  await page.getByLabel("对外匿名发布", { exact: false }).uncheck();
+  await expect(page.locator(".draft-actions [role=status]")).toContainText(
+    "草稿已保存",
+  );
+  const draftUrl = page.url();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "登录后继续" })).toBeVisible();
+  await login(page, username, password);
+  await page.getByRole("link", { name: "我的记录", exact: true }).click();
+  const item = page.locator(".draft-list article").filter({ hasText: title });
+  await expect(item).toContainText("未提交");
+  await item.getByRole("link", { name: "继续编辑", exact: true }).click();
+  await expect(page.getByLabel("用一句话概括")).toHaveValue(title);
+  await expect(page.getByLabel("说说你的亲身经历")).toHaveValue(
+    "还没有写完的正文",
+  );
+  await expect(
+    page.getByLabel("对外匿名发布", { exact: false }),
+  ).not.toBeChecked();
+  const peerContext = await browser.newContext({
+    baseURL: new URL(page.url()).origin,
+  });
+  try {
+    const peer = await peerContext.newPage();
+    await login(peer, username, password);
+    await peer.getByRole("link", { name: "我的记录", exact: true }).click();
+    await peer
+      .locator(".draft-list article")
+      .filter({ hasText: title })
+      .getByRole("link", { name: "继续编辑", exact: true })
+      .click();
+    await expect(peer.getByLabel("用一句话概括")).toHaveValue(title);
+    const changed = "浏览器草稿恢复：另一窗口已保存的新标题";
+    await page.getByLabel("用一句话概括").fill(changed);
+    await expect(page.locator(".draft-actions [role=status]")).toContainText(
+      "草稿已保存",
+    );
+    await peer
+      .getByLabel("说说你的亲身经历")
+      .fill(
+        "另一窗口的修改不能被这个过期窗口静默覆盖。这里是尚未保存的不同内容。",
+      );
+    await expect(peer.getByRole("alert")).toContainText("其他地方修改或提交");
+    await expect(peer.getByLabel("说说你的亲身经历")).toBeEnabled();
+    await expect(peer.getByLabel("说说你的亲身经历")).toHaveValue(
+      "另一窗口的修改不能被这个过期窗口静默覆盖。这里是尚未保存的不同内容。",
+    );
+    await peer.getByRole("button", { name: "替换输入并读取最新草稿" }).click();
+    await expect(peer.getByLabel("用一句话概括")).toHaveValue(changed);
+    await expect(peer.getByLabel("说说你的亲身经历")).toHaveValue(
+      "还没有写完的正文",
+    );
+  } finally {
+    await peerContext.close();
+  }
+  await page.getByRole("button", { name: "找不到？添加一个新对象" }).click();
+  await page.getByRole("button", { name: "返回", exact: true }).click();
+  await expect(page.getByLabel("用一句话概括")).toHaveValue(
+    "浏览器草稿恢复：另一窗口已保存的新标题",
+  );
+  expect(new URL(draftUrl).searchParams.get("draft")).toBe(
+    new URL(page.url()).searchParams.get("draft"),
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "200%";
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+  ).toBe(true);
+  await chooseTheme(page, "深色模式");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: "test-results/draft-editor-dark-large.png",
+    fullPage: true,
+  });
+});
+
+test("reconciles a lost autosave response and restores a committed submission after reload", async ({
+  page,
+}) => {
+  const username = `draft_retry_${Date.now()}`,
+    password = "test-only-draft-retry-2026";
+  const account = await (
+    await page.request.post("/api/v1/auth/register", {
+      data: { username, password, nickname: "草稿重试测试作者" },
+    })
+  ).json();
+  await login(page, username, password);
+  await page.getByRole("link", { name: "记录一次经历", exact: true }).click();
+  const saves: { version: number; mutationKey: string; title: string }[] = [];
+  await page.route("**/api/v1/me/drafts/*", async (route) => {
+    if (route.request().method() !== "PUT") return route.continue();
+    saves.push(route.request().postDataJSON());
+    if (saves.length === 1) {
+      const result = await route.fetch();
+      expect(result.status()).toBe(200);
+      await route.abort("failed");
+    } else await route.continue();
+  });
+  await page.getByLabel("用一句话概括").fill("草稿保存响应丢失前的标题");
+  await expect(page.getByRole("alert")).toContainText("无法保存草稿");
+  const title = "草稿保存响应丢失后的新标题";
+  await page.getByLabel("用一句话概括").fill(title);
+  await expect(page.locator(".draft-actions [role=status]")).toContainText(
+    "草稿已保存",
+  );
+  expect(saves).toHaveLength(3);
+  expect(saves[1]).toEqual(saves[0]);
+  expect(saves[2].version).toBe(1);
+  expect(saves[2].mutationKey).not.toBe(saves[0].mutationKey);
+  await page.unroute("**/api/v1/me/drafts/*");
+  await page.getByLabel("搜索对象名称或门店地址").fill("山间面馆");
+  await page.getByRole("button", { name: "查找对象", exact: true }).click();
+  await page.getByLabel("选择对象").selectOption("demo-noodle");
+  await page
+    .getByLabel("说说你的亲身经历")
+    .fill("这是一条用于验证重启后恢复投稿结果的虚构经历，所有文字仅用于测试。");
+  await page.getByLabel("发生日期").fill("2026-01-01");
+  await page.getByLabel("确认这是我的亲身经历，并愿意补充后续。").check();
+  await page.route("**/api/v1/me/drafts/*/submit", async (route) => {
+    const result = await route.fetch();
+    expect(result.status()).toBe(201);
+    await route.abort("failed");
+  });
+  await page.getByRole("button", { name: "提交审核", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "确认投稿结果" }),
+  ).toContainText("尚未确认提交结果");
+  await page.reload();
+  await page.unroute("**/api/v1/me/drafts/*/submit");
+  await login(page, username, password);
+  await page.getByRole("link", { name: "我的记录", exact: true }).click();
+  const item = page.locator(".draft-list article").filter({ hasText: title });
+  await expect(item).toContainText("已提交，结果可核对");
+  await item.getByRole("link", { name: "查看投稿结果", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "感谢你，多留一份依据。" }),
+  ).toBeVisible();
+  const posts = await (
+    await page.request.get("/api/v1/me/posts", {
+      headers: { Authorization: `Bearer ${account.token}` },
+    })
+  ).json();
+  expect(
+    posts.items.filter((p: { title: string }) => p.title === title),
+  ).toHaveLength(1);
 });

@@ -312,4 +312,30 @@ describe("local community workflow and privacy boundaries", () => {
       (await request(app).get("/api/v1/me").set(auth(authorToken))).status,
     ).toBe(401);
   });
+  it("enforces the default limit on the twenty-first authentication request", async () => {
+    const limited = createApp(db);
+    for (let i = 0; i < 20; i++)
+      expect(
+        (await request(limited).post("/api/v1/auth/login").send({})).status,
+      ).toBe(400);
+    const blocked = await request(limited).post("/api/v1/auth/login").send({});
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.code).toBe("RATE_LIMIT");
+    expect(Number(blocked.headers["retry-after"])).toBeGreaterThan(0);
+    expect((await request(limited).get("/api/v1/health")).status).toBe(200);
+  });
+  it("keeps a configured authentication limit active", async () => {
+    const limited = createApp(db, { authLimit: 25 });
+    for (let i = 0; i < 25; i++)
+      expect(
+        (await request(limited).post("/api/v1/auth/login").send({})).status,
+      ).toBe(400);
+    expect(
+      (await request(limited).post("/api/v1/auth/login").send({})).status,
+    ).toBe(429);
+  });
+  it("rejects authentication settings that would disable or invalidate the limit", () => {
+    for (const authLimit of [0, -1, 1.5, Infinity, NaN, 1001])
+      expect(() => createApp(db, { authLimit })).toThrow("AUTH_RATE_LIMIT");
+  });
 });

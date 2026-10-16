@@ -11,6 +11,7 @@ import { useSession } from "../lib/session";
 import { useResource, date } from "../lib/resource";
 import { Feedback, PageHeading } from "../components/ui";
 import { UpdateForm } from "./Detail";
+import { DraftList } from "../components/DraftList";
 export function Login() {
   const { api, setSession } = useSession();
   const [register, setRegister] = useState(false);
@@ -173,6 +174,7 @@ function OwnList() {
   return (
     <>
       <PageHeading eyebrow="留下记录，也补充后来" title="我的记录" />
+      <DraftList />
       {!resource.data ? (
         <Feedback error={resource.error} loading={resource.loading} />
       ) : resource.data.items.length ? (

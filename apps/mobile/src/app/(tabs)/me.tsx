@@ -7,6 +7,7 @@ import { Pagination } from "../../components/Pagination";
 import { useApp } from "../../lib/context";
 import { useResource } from "../../lib/resource";
 import { Screen, Heading, Message, Button } from "../../components/ui";
+import { DraftList } from "../../components/DraftList";
 export default function Me() {
   const { user, colors, mode, changeMode, logout } = useApp();
   const [error, setError] = useState("");
@@ -38,6 +39,7 @@ export default function Me() {
       {error && <Message error={error} />}{" "}
       {user ? (
         <>
+          <DraftList />
           <OwnList />
           <Button
             secondary

@@ -1,15 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { useDraftEditor } from "@secondlook/compose";
 import { randomUUID } from "expo-crypto";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Switch, Text, View } from "react-native";
-import {
-  categories,
-  postSchema,
-  type Category,
-  type Subject,
-  type PostSubmission,
-} from "@secondlook/contracts";
-import { ApiError } from "@secondlook/contracts/client";
+import { categories, type Category, type Subject } from "@secondlook/contracts";
 import { useApp } from "../../lib/context";
 import { SubjectPicker } from "../../components/SubjectPicker";
 import {
@@ -22,30 +16,46 @@ import {
 } from "../../components/ui";
 export default function Write() {
   const { user } = useApp();
-  return user ? <Compose /> : <LoginGate />;
+  const { draft, fresh } = useLocalSearchParams<{
+    draft?: string;
+    fresh?: string;
+  }>();
+  useEffect(() => {
+    if (user && !draft) router.setParams({ draft: randomUUID(), fresh: "1" });
+  }, [user, draft]);
+  if (!user) return <LoginGate />;
+  if (!draft)
+    return (
+      <Screen>
+        <Message loading />
+      </Screen>
+    );
+  return (
+    <Compose key={`${user.id}:${draft}`} id={draft} fresh={fresh === "1"} />
+  );
 }
-function Compose() {
+function Compose({ id, fresh }: { id: string; fresh: boolean }) {
   const { api, colors } = useApp();
-  const [selected, setSelected] = useState<Subject | null>(null);
+  const draft = useDraftEditor(api, id, fresh, randomUUID);
+  const {
+    content,
+    edit,
+    subject: selected,
+    selectSubject: setSelected,
+    done: postId,
+    pending,
+    busy,
+  } = draft;
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [category, setCategory] = useState<Category>("RESTAURANT");
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-  const [occurredOn, setDate] = useState("");
-  const [anonymous, setAnonymous] = useState(true);
-  const [personal, setPersonal] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [done, setDone] = useState(false);
-  const [postId, setPostId] = useState("");
-  const [pending, setPending] = useState<PostSubmission | null>(null);
-  const submitting = useRef(false);
+  const [createBusy, setCreateBusy] = useState(false);
+  const [createError, setCreateError] = useState("");
   async function create() {
-    setBusy(true);
-    setError("");
+    setCreateBusy(true);
+    setCreateError("");
     try {
       const subject = await api<Subject>("/subjects", {
         method: "POST",
@@ -54,59 +64,21 @@ function Compose() {
       setSelected(subject);
       setCreating(false);
     } catch (e) {
-      setError((e as Error).message);
+      setCreateError((e as Error).message);
     } finally {
-      setBusy(false);
+      setCreateBusy(false);
     }
   }
-  async function submit() {
-    if (submitting.current || busy) return;
-    const checked = postSchema.safeParse({
-      subjectId: selected?.id ?? "",
-      title,
-      body,
-      occurredOn,
-      anonymous,
-      personalExperience: personal,
-    });
-    if (!checked.success) {
-      setError(checked.error.issues[0].message);
-      return;
-    }
-    await send({ ...checked.data, clientKey: randomUUID() });
-  }
-  async function send(data: PostSubmission) {
-    if (submitting.current) return;
-    submitting.current = true;
-    setPending(data);
-    setBusy(true);
-    setError("");
-    try {
-      const post = await api<{ id: string }>("/posts", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
-      setPostId(post.id);
-      setDone(true);
-    } catch (e) {
-      setError(
-        e instanceof ApiError
-          ? e.message
-          : "连接中断，尚未确认投稿结果，请重试确认。",
-      );
-      if (
-        e instanceof ApiError &&
-        e.status >= 400 &&
-        e.status < 500 &&
-        ![408, 409].includes(e.status)
-      )
-        setPending(null);
-    } finally {
-      submitting.current = false;
-      setBusy(false);
-    }
-  }
-  if (done)
+  if (draft.loading || draft.loadError)
+    return (
+      <Screen>
+        <Message loading={draft.loading} error={draft.loadError} />
+        {draft.loadError && (
+          <Button onPress={() => void draft.load()}>重试读取草稿</Button>
+        )}
+      </Screen>
+    );
+  if (postId)
     return (
       <Screen>
         <Heading
@@ -118,19 +90,17 @@ function Compose() {
             添加图片材料（可选）
           </Button>
         </View>
-        <Button
-          onPress={() => {
-            setDone(false);
-            setPending(null);
-            setTitle("");
-            setBody("");
-            setDate("");
-            setPersonal(false);
-            router.push("/me");
-          }}
-        >
-          查看我的记录
-        </Button>
+        <Button onPress={() => router.push("/me")}>查看我的记录</Button>
+        <View style={{ marginTop: 16 }}>
+          <Button
+            secondary
+            onPress={() =>
+              router.setParams({ draft: randomUUID(), fresh: "1" })
+            }
+          >
+            记录新的经历
+          </Button>
+        </View>
       </Screen>
     );
   return (
@@ -139,7 +109,37 @@ function Compose() {
         eyebrow="真实、具体，也允许有后续"
         title={creating ? "添加一个具体对象" : "记录一次经历"}
       />
-      {error && <Message error={error} />}{" "}
+      {(createError || draft.error) && (
+        <Message error={createError || draft.error} />
+      )}{" "}
+      <Text
+        accessibilityLiveRegion="polite"
+        style={{
+          color: colors.muted,
+          fontSize: 14,
+          lineHeight: 24,
+          marginBottom: 16,
+        }}
+      >
+        {draft.status}。保存到本地后端账号，草稿不会公开。
+      </Text>
+      {!pending && !draft.conflict && (
+        <Button
+          secondary
+          disabled={busy}
+          onPress={() => void draft.save().catch(() => {})}
+        >
+          保存草稿
+        </Button>
+      )}
+      {draft.conflict && (
+        <>
+          <Message error="读取最新草稿会替换当前输入，请先复制需要保留的文字。" />
+          <Button secondary onPress={() => void draft.load()}>
+            替换输入并读取最新草稿
+          </Button>
+        </>
+      )}
       {pending ? (
         <View style={{ gap: 16 }}>
           <Text
@@ -162,10 +162,15 @@ function Compose() {
                 : "尚未确认提交结果。重试会核对同一份投稿，不会重复创建；请先确认结果再编辑或提交新的经历。"
             }
           />
-          <Button disabled={busy} onPress={() => void send(pending)}>
+          <Button
+            disabled={busy || draft.conflict}
+            onPress={() => void draft.submit()}
+          >
             {busy ? "正在确认…" : "重试并确认结果"}
           </Button>
         </View>
+      ) : busy ? (
+        <Message empty="正在保存并确认投稿，请稍候。" />
       ) : creating ? (
         <>
           <Field
@@ -201,7 +206,7 @@ function Compose() {
             maxLength={150}
           />
           <View style={{ gap: 12 }}>
-            <Button disabled={busy} onPress={() => void create()}>
+            <Button disabled={createBusy} onPress={() => void create()}>
               保存对象
             </Button>
             <Button secondary onPress={() => setCreating(false)}>
@@ -218,21 +223,21 @@ function Compose() {
           <View style={{ height: 22 }} />
           <Field
             label="用一句话概括"
-            value={title}
-            onChangeText={setTitle}
+            value={content.title}
+            onChangeText={(title) => edit({ title })}
             maxLength={80}
           />
           <Field
             label="发生日期（YYYY-MM-DD）"
             placeholder="例如 2026-10-01"
-            value={occurredOn}
-            onChangeText={setDate}
+            value={content.occurredOn}
+            onChangeText={(occurredOn) => edit({ occurredOn })}
             maxLength={10}
           />
           <Field
             label="说说你的亲身经历"
-            value={body}
-            onChangeText={setBody}
+            value={content.body}
+            onChangeText={(body) => edit({ body })}
             multiline
             maxLength={5000}
             placeholder="具体经过、遇到的问题和目前的处理情况。至少 20 字。"
@@ -249,8 +254,8 @@ function Compose() {
               对外匿名发布
             </Text>
             <Switch
-              value={anonymous}
-              onValueChange={setAnonymous}
+              value={content.anonymous}
+              onValueChange={(anonymous) => edit({ anonymous })}
               accessibilityLabel="对外匿名发布"
               trackColor={{ true: colors.accent }}
             />
@@ -268,14 +273,19 @@ function Compose() {
               确认这是我的亲身经历，并愿意补充后续
             </Text>
             <Switch
-              value={personal}
-              onValueChange={setPersonal}
+              value={content.personalExperience}
+              onValueChange={(personalExperience) =>
+                edit({ personalExperience })
+              }
               accessibilityLabel="确认亲身经历"
               trackColor={{ true: colors.accent }}
             />
           </View>
           <Message empty="匿名仍保留平台账号关联。请隐藏私人信息。提交后可添加图片材料，选择公开脱敏副本或仅供审核。" />
-          <Button disabled={busy} onPress={() => void submit()}>
+          <Button
+            disabled={busy || draft.conflict}
+            onPress={() => void draft.submit()}
+          >
             {busy ? "正在提交…" : "提交审核"}
           </Button>
         </>

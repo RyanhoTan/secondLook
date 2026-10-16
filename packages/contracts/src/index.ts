@@ -49,6 +49,29 @@ export const updateSchema = z.object({
 });
 export const postSubmissionSchema = postSchema.extend({ clientKey: z.uuid() });
 export type PostSubmission = z.infer<typeof postSubmissionSchema>;
+export const draftContentSchema = z.object({
+  subjectId: z.string().min(1).nullable(),
+  title: z.string().max(80),
+  body: z.string().max(5000),
+  occurredOn: z.string().max(10),
+  anonymous: z.boolean(),
+  personalExperience: z.boolean(),
+});
+export const saveDraftSchema = draftContentSchema.extend({
+  version: z.number().int().min(0),
+  mutationKey: z.uuid(),
+});
+export const draftSubmissionSchema = z.object({
+  version: z.number().int().min(1),
+});
+export type DraftContent = z.infer<typeof draftContentSchema>;
+export type PostDraft = DraftContent & {
+  id: string;
+  version: number;
+  subject: Subject | null;
+  postId: string | null;
+  updatedAt: string;
+};
 export const revisionSchema = postSchema
   .pick({
     title: true,

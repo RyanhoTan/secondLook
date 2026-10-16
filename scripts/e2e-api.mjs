@@ -10,6 +10,8 @@ const env = {
   DATABASE_URL: `file:${join(dir, "test.db")}`,
   UPLOAD_DIR: join(dir, "uploads"),
   PORT: String(Number(process.env.SECONDLOOK_E2E_API_PORT ?? 3101)),
+  // Shared browser fixtures create many accounts/sessions; default limits are tested in API tests.
+  AUTH_RATE_LIMIT: "200",
   SEED_ADMIN_PASSWORD: "test-only-admin-2026",
   SEED_DEMO_PASSWORD: "test-only-demo-2026",
   WEB_ORIGINS: `http://127.0.0.1:${Number(process.env.SECONDLOOK_E2E_WEB_PORT ?? 5174)}`,

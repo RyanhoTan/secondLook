@@ -2,14 +2,11 @@ import { createHash } from "node:crypto";
 import type { PostSubmission } from "@secondlook/contracts";
 import type { Database } from "./db.js";
 import { HttpError } from "./http.js";
+import type { z } from "zod";
+import type { postSchema } from "@secondlook/contracts";
 
-export async function submitPost(
-  db: Database,
-  authorId: string,
-  { clientKey, personalExperience: _declaration, ...data }: PostSubmission,
-) {
-  // Keep the initial request digest immutable when the published text is revised.
-  const digest = createHash("sha256")
+export function postDigest(data: z.infer<typeof postSchema>) {
+  return createHash("sha256")
     .update(
       JSON.stringify([
         data.subjectId,
@@ -20,6 +17,15 @@ export async function submitPost(
       ]),
     )
     .digest("hex");
+}
+
+export async function submitPost(
+  db: Database,
+  authorId: string,
+  { clientKey, personalExperience: _declaration, ...data }: PostSubmission,
+) {
+  // Keep the initial request digest immutable when the published text is revised.
+  const digest = postDigest({ ...data, personalExperience: true });
   const where = {
     authorId_submissionKey: { authorId, submissionKey: clientKey },
   };
