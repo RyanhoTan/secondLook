@@ -1,5 +1,9 @@
+import {
+  type revisionSchema,
+  occurrenceBounds,
+  publicOccurrence,
+} from "@secondlook/contracts";
 import type { z } from "zod";
-import type { revisionSchema } from "@secondlook/contracts";
 import type { Database } from "./db.js";
 import { HttpError } from "./http.js";
 import { scheduleMaterialReviews } from "./materials.js";
@@ -11,6 +15,8 @@ export const revisionSelect = {
   title: true,
   body: true,
   occurredOn: true,
+  occurredPrecision: true,
+  occurredUntil: true,
   issueTypes: true,
   changeReason: true,
   publishedAt: true,
@@ -23,6 +29,8 @@ export function publicRevision(row: {
   title: string;
   body: string;
   occurredOn: string;
+  occurredPrecision: string;
+  occurredUntil: string;
   issueTypes: unknown;
   changeReason: string;
   publishedAt: Date | null;
@@ -39,7 +47,7 @@ export function publicRevision(row: {
         visible: true as const,
         title: row.title,
         body: row.body,
-        occurredOn: row.occurredOn,
+        ...publicOccurrence(row),
         issueTypes: storedIssues(row.issueTypes),
         changeReason: row.changeReason,
       }
@@ -79,16 +87,19 @@ export async function submitRevision(
       throw new HttpError(409, "公开版本已变化，请重新打开修改页面");
     if (await tx.postRevision.findUnique({ where: { pendingKey: postId } }))
       throw new HttpError(409, "已有修改等待审核，请勿重复提交");
+    const normalized = occurrenceBounds(data);
     if (
       post.title === data.title &&
       post.body === data.body &&
-      post.occurredOn === data.occurredOn &&
+      post.occurredOn === normalized.occurredOn &&
+      post.occurredPrecision === normalized.occurredPrecision &&
+      post.occurredUntil === normalized.occurredUntil &&
       JSON.stringify(postIssues(post.issues)) ===
         JSON.stringify(data.issueTypes)
     )
       throw new HttpError(400, "请先修改标题、正文、发生日期或问题类型");
     return tx.postRevision.create({
-      data: { ...data, postId, pendingKey: postId },
+      data: { ...data, ...normalized, postId, pendingKey: postId },
     });
   });
 }
@@ -138,6 +149,8 @@ export async function reviewRevision(
         title: revision.title,
         body: revision.body,
         occurredOn: revision.occurredOn,
+        occurredPrecision: revision.occurredPrecision,
+        occurredUntil: revision.occurredUntil,
         currentVersion: version,
       },
     });

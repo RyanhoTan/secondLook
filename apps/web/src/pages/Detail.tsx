@@ -1,12 +1,13 @@
+import {
+  formatOccurrence,
+  type PostDetail,
+  type Page,
+  type PublicPost,
+  type Subject,
+} from "@secondlook/contracts";
 import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router";
 import { ArrowLeft, Bell, Check, ArrowUpRight } from "lucide-react";
-import type {
-  PostDetail,
-  Page,
-  PublicPost,
-  Subject,
-} from "@secondlook/contracts";
 import { useResource, date } from "../lib/resource";
 import { useSession } from "../lib/session";
 import { EvidenceTag, Feedback, PageHeading, PostCard } from "../components/ui";
@@ -54,7 +55,7 @@ export function Detail() {
         <h1>{data.title}</h1>
         <div className="detail-meta">
           <span>{data.authorName}</span>
-          <span>{date(data.occurredOn)}发生</span>
+          <span>{formatOccurrence(data)}发生</span>
           <span>{data.subject.city}</span>
         </div>
         <EvidenceTag post={data} />

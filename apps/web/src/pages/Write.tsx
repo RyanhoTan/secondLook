@@ -1,14 +1,20 @@
+import {
+  formatOccurrence,
+  categories,
+  type Subject,
+  type Category,
+} from "@secondlook/contracts";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, Navigate, useSearchParams } from "react-router";
 import { useDraftEditor } from "@secondlook/compose";
 import { CheckCircle2 } from "lucide-react";
-import { categories, type Subject, type Category } from "@secondlook/contracts";
 import { newClientKey } from "../lib/client-key";
 import { useSession } from "../lib/session";
 import { SubjectPicker } from "../components/SubjectPicker";
 import { IssuePicker, IssueTypes } from "../components/IssueTypes";
 import { NeedLogin } from "./Account";
 import { Feedback, PageHeading } from "../components/ui";
+import { OccurrenceFields } from "../components/OccurrenceFields";
 import { PostPreview } from "../components/PostPreview";
 export function Write() {
   const { user } = useSession();
@@ -165,7 +171,7 @@ function WriteForm({ id, fresh }: { id: string; fresh: boolean }) {
           </p>
           <h3>{pending.title}</h3>
           <p className="small-note">
-            {selected?.name} · {pending.occurredOn} ·{" "}
+            {selected?.name} · {formatOccurrence(pending)} ·{" "}
             {pending.anonymous ? "匿名亲历者" : "使用昵称"}
           </p>
           <p className="revision-text">{pending.body}</p>
@@ -267,17 +273,7 @@ function WriteForm({ id, fresh }: { id: string; fresh: boolean }) {
                   placeholder="具体一点，比如菜单标注与实际收费不一致"
                 />
               </label>
-              <label>
-                发生日期
-                <input
-                  name="occurredOn"
-                  value={content.occurredOn}
-                  onChange={(e) => edit({ occurredOn: e.target.value })}
-                  type="date"
-                  required
-                  max={new Date().toISOString().slice(0, 10)}
-                />
-              </label>
+              <OccurrenceFields value={content} onChange={edit} />
               <label>
                 说说你的亲身经历
                 <textarea

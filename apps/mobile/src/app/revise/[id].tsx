@@ -1,7 +1,13 @@
+import {
+  type Occurrence,
+  formatOccurrence,
+  revisionSchema,
+  type RevisionEditor,
+} from "@secondlook/contracts";
+import { OccurrenceFields } from "../../components/OccurrenceFields";
 import { useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { Text, View } from "react-native";
-import { revisionSchema, type RevisionEditor } from "@secondlook/contracts";
 import { useApp } from "../../lib/context";
 import { useResource } from "../../lib/resource";
 import { IssuePicker, IssueTypes } from "../../components/IssueTypes";
@@ -38,7 +44,11 @@ function Form({ data }: { data: RevisionEditor }) {
   const content = latest?.status === "REJECTED" ? latest : data.post;
   const [title, setTitle] = useState(content.title);
   const [body, setBody] = useState(content.body);
-  const [occurredOn, setOccurredOn] = useState(content.occurredOn);
+  const [occurrence, setOccurrence] = useState<Occurrence>({
+    occurredOn: content.occurredOn,
+    occurredPrecision: content.occurredPrecision,
+    occurredUntil: content.occurredUntil,
+  });
   const [issueTypes, setIssueTypes] = useState(content.issueTypes);
   const [changeReason, setChangeReason] = useState(
     latest?.status === "REJECTED" ? latest.changeReason : "",
@@ -52,7 +62,7 @@ function Form({ data }: { data: RevisionEditor }) {
     const checked = revisionSchema.safeParse({
       title,
       body,
-      occurredOn,
+      ...occurrence,
       issueTypes,
       changeReason,
       baseVersion: data.post.currentVersion,
@@ -96,7 +106,7 @@ function Form({ data }: { data: RevisionEditor }) {
           </Text>
           <IssueTypes value={latest.issueTypes} />
           <Text style={{ color: colors.muted, fontSize: 15 }}>
-            发生日期：{latest.occurredOn}
+            发生时间：{formatOccurrence(latest)}
           </Text>
           <Text style={{ color: colors.muted, fontSize: 15, lineHeight: 25 }}>
             更正说明：{latest.changeReason}
@@ -115,11 +125,9 @@ function Form({ data }: { data: RevisionEditor }) {
             onChangeText={setTitle}
             maxLength={80}
           />
-          <Field
-            label="发生日期（YYYY-MM-DD）"
-            value={occurredOn}
-            onChangeText={setOccurredOn}
-            maxLength={10}
+          <OccurrenceFields
+            value={occurrence}
+            onChange={(patch) => setOccurrence({ ...occurrence, ...patch })}
           />
           <Field
             label="经历正文"

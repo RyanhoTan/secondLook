@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { decisionSchema } from "@secondlook/contracts";
+import { decisionSchema, publicOccurrence } from "@secondlook/contracts";
 import type { Database } from "../db.js";
 import { authenticate, requireAdmin } from "../auth.js";
 import { HttpError } from "../http.js";
@@ -36,6 +36,7 @@ export function adminRoutes(db: Database) {
         title: p.title,
         body: p.body,
         kind: "POST",
+        ...publicOccurrence(p),
         issueTypes: postIssues(p.issues),
         subjectName: p.subject.name,
         createdAt: p.createdAt.toISOString(),
@@ -55,13 +56,13 @@ export function adminRoutes(db: Database) {
         kind: "REVISION",
         issueTypes: storedIssues(r.issueTypes),
         changeReason: r.changeReason,
-        occurredOn: r.occurredOn,
+        ...publicOccurrence(r),
         subjectName: r.post.subject.name,
         createdAt: r.createdAt.toISOString(),
         previous: {
           title: r.post.title,
           body: r.post.body,
-          occurredOn: r.post.occurredOn,
+          ...publicOccurrence(r.post),
           version: r.post.currentVersion,
           issueTypes: postIssues(r.post.issues),
         },

@@ -45,6 +45,8 @@ model Post {
   title String
   body String
   occurredOn String
+  occurredPrecision String @default("DAY")
+  occurredUntil String @default("")
   anonymous Boolean @default(false)
   status String @default("PENDING")
   evidence String @default("STATEMENT")
@@ -63,6 +65,8 @@ model Post {
   materials Material[]
   draft PostDraft?
   @@index([status,publishedAt])
+  @@index([status,occurredOn])
+  @@index([status,occurredUntil])
   @@index([subjectId,status])
   @@unique([authorId,submissionKey])
 }
@@ -83,6 +87,8 @@ model PostDraft {
   title String
   body String
   occurredOn String
+  occurredPrecision String @default("DAY")
+  occurredUntil String @default("")
   anonymous Boolean
   personalExperience Boolean
   version Int @default(1)
@@ -104,6 +110,8 @@ model PostRevision {
   title String
   body String
   occurredOn String
+  occurredPrecision String @default("DAY")
+  occurredUntil String @default("")
   changeReason String
   status String @default("PENDING")
   reviewReason String?

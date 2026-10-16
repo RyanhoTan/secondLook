@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { issueTypesSchema, issueTypeSchema, type IssueType } from "./issues";
 export * from "./issues";
+import {
+  occurrenceFields,
+  validateOccurrence,
+  type OccurrencePrecision,
+} from "./occurrence";
+export * from "./occurrence";
 export const categories = {
   COMPANY: "公司",
   RESTAURANT: "饭店",
@@ -32,7 +38,7 @@ export const subjectSchema = z.object({
   city: z.string().trim().min(2).max(30),
   address: z.string().trim().max(150).default(""),
 });
-export const postSchema = z.object({
+const postFieldsSchema = z.object({
   issueTypes: issueTypesSchema.refine(
     (v) => v.length > 0,
     "请至少选择一个问题类型",
@@ -40,20 +46,18 @@ export const postSchema = z.object({
   subjectId: z.string().min(1),
   title: z.string().trim().min(5).max(80),
   body: z.string().trim().min(20).max(5000),
-  occurredOn: z.iso
-    .date()
-    .refine(
-      (v) => v <= new Date().toISOString().slice(0, 10),
-      "发生日期不能晚于今天",
-    ),
+  ...occurrenceFields,
   anonymous: z.boolean(),
   personalExperience: z.literal(true, { error: "请确认这是你的亲身经历" }),
 });
+export const postSchema = postFieldsSchema.superRefine(validateOccurrence);
 export const updateSchema = z.object({
   title: z.string().trim().min(2).max(80),
   body: z.string().trim().min(10).max(5000),
 });
-export const postSubmissionSchema = postSchema.extend({ clientKey: z.uuid() });
+export const postSubmissionSchema = postFieldsSchema
+  .extend({ clientKey: z.uuid() })
+  .superRefine(validateOccurrence);
 export type PostSubmission = z.infer<typeof postSubmissionSchema>;
 export const draftContentSchema = z.object({
   issueTypes: issueTypesSchema.default([]),
@@ -61,6 +65,8 @@ export const draftContentSchema = z.object({
   title: z.string().max(80),
   body: z.string().max(5000),
   occurredOn: z.string().max(10),
+  occurredPrecision: occurrenceFields.occurredPrecision,
+  occurredUntil: z.string().max(10).default(""),
   anonymous: z.boolean(),
   personalExperience: z.boolean(),
 });
@@ -79,17 +85,20 @@ export type PostDraft = DraftContent & {
   postId: string | null;
   updatedAt: string;
 };
-export const revisionSchema = postSchema
+export const revisionSchema = postFieldsSchema
   .pick({
     title: true,
     body: true,
     occurredOn: true,
+    occurredPrecision: true,
+    occurredUntil: true,
     issueTypes: true,
   })
   .extend({
     baseVersion: z.number().int().min(1),
     changeReason: z.string().trim().min(5).max(500),
-  });
+  })
+  .superRefine(validateOccurrence);
 export const historyVisibilitySchema = z.object({
   reason: z.string().trim().min(2).max(500),
 });
@@ -143,7 +152,7 @@ export type MaterialReview = OwnMaterial & {
   postTitle: string;
   subjectName: string;
   postBody: string;
-  postOccurredOn: string;
+  postOccurrenceLabel: string;
 };
 export const materialVersionQuerySchema = z.object({
   version: z.coerce.number().int().min(1).optional(),
@@ -227,6 +236,8 @@ export type PublicPost = {
   title: string;
   body: string;
   occurredOn: string;
+  occurredPrecision: OccurrencePrecision;
+  occurredUntil: string;
   createdAt: string;
   authorName: string;
   anonymous: boolean;
@@ -254,6 +265,8 @@ export type PublicRevision = {
       title: string;
       body: string;
       occurredOn: string;
+      occurredPrecision: OccurrencePrecision;
+      occurredUntil: string;
       issueTypes: IssueType[];
       changeReason: string;
     }
@@ -265,6 +278,8 @@ export type OwnRevision = {
   title: string;
   body: string;
   occurredOn: string;
+  occurredPrecision: OccurrencePrecision;
+  occurredUntil: string;
   changeReason: string;
   status: string;
   reviewReason: string | null;
@@ -272,7 +287,14 @@ export type OwnRevision = {
 export type RevisionEditor = {
   post: Pick<
     PublicPost,
-    "id" | "title" | "body" | "occurredOn" | "currentVersion" | "issueTypes"
+    | "id"
+    | "title"
+    | "body"
+    | "occurredOn"
+    | "currentVersion"
+    | "issueTypes"
+    | "occurredPrecision"
+    | "occurredUntil"
   > & { category: Category };
   latestRevision: OwnRevision | null;
 };
@@ -298,10 +320,14 @@ export type Review = {
   kind: "POST" | "UPDATE" | "REVISION";
   changeReason?: string;
   occurredOn?: string;
+  occurredPrecision?: OccurrencePrecision;
+  occurredUntil?: string;
   previous?: {
     title: string;
     body: string;
     occurredOn: string;
+    occurredPrecision: OccurrencePrecision;
+    occurredUntil: string;
     version: number;
     issueTypes: IssueType[];
   };

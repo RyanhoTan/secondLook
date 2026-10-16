@@ -1,12 +1,14 @@
-import { Router } from "express";
-import multer from "multer";
-import { rateLimit } from "express-rate-limit";
 import {
+  publicOccurrence,
+  formatOccurrence,
   materialLimits,
   materialReviewSchema,
   materialSchema,
   materialVersionQuerySchema,
 } from "@secondlook/contracts";
+import { Router } from "express";
+import multer from "multer";
+import { rateLimit } from "express-rate-limit";
 import type { Database } from "../db.js";
 import { authenticate, requireAdmin } from "../auth.js";
 import { HttpError } from "../http.js";
@@ -177,7 +179,7 @@ export function materialRoutes(db: Database, files: MaterialFiles) {
           postTitle: item.post.title,
           subjectName: item.post.subject.name,
           postBody: item.post.body,
-          postOccurredOn: item.post.occurredOn,
+          postOccurrenceLabel: formatOccurrence(publicOccurrence(item.post)),
         })),
       );
     },

@@ -1,6 +1,6 @@
+import { formatOccurrence, categories } from "@secondlook/contracts";
 import type { RefObject } from "react";
 import type { PostPreview as Preview } from "@secondlook/compose";
-import { categories } from "@secondlook/contracts";
 import { IssueTypes } from "./IssueTypes";
 
 export function PostPreview({
@@ -37,7 +37,7 @@ export function PostPreview({
         <p className="small-note">{subject.address || "未填写具体地址"}</p>
       </div>
       <h3>{content.title}</h3>
-      <p className="small-note">发生日期：{content.occurredOn}</p>
+      <p className="small-note">发生时间：{formatOccurrence(content)}</p>
       <p className="preview-identity">
         对外身份：{content.anonymous ? "匿名亲历者" : nickname}
       </p>

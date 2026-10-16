@@ -1,5 +1,9 @@
 import type { z } from "zod";
-import { postSchema, type saveDraftSchema } from "@secondlook/contracts";
+import {
+  postSchema,
+  occurrenceBounds,
+  type saveDraftSchema,
+} from "@secondlook/contracts";
 import type { Database } from "./db.js";
 import { HttpError } from "./http.js";
 import { checkIssueCategory, storedIssues } from "./issues.js";
@@ -15,6 +19,8 @@ export const ownDraft = (d: DraftRow) => ({
   body: d.body,
   subjectId: d.subjectId,
   occurredOn: d.occurredOn,
+  occurredPrecision: d.occurredPrecision,
+  occurredUntil: d.occurredUntil,
   issueTypes: storedIssues(d.issueTypes),
   anonymous: d.anonymous,
   personalExperience: d.personalExperience,
@@ -106,6 +112,7 @@ export async function submitDraft(
     const post = await tx.post.create({
       data: {
         ...content,
+        ...occurrenceBounds(content),
         issues: { create: issueTypes.map((code) => ({ code })) },
         authorId,
         submissionKey: `draft:${id}`,

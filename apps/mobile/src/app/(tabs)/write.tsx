@@ -1,12 +1,18 @@
+import {
+  formatOccurrence,
+  categories,
+  type Category,
+  type Subject,
+} from "@secondlook/contracts";
 import { useEffect, useState } from "react";
 import { useDraftEditor } from "@secondlook/compose";
 import { randomUUID } from "expo-crypto";
 import { router, useLocalSearchParams } from "expo-router";
 import { Keyboard, Switch, Text, View } from "react-native";
-import { categories, type Category, type Subject } from "@secondlook/contracts";
 import { useApp } from "../../lib/context";
 import { SubjectPicker } from "../../components/SubjectPicker";
 import { IssuePicker, IssueTypes } from "../../components/IssueTypes";
+import { OccurrenceFields } from "../../components/OccurrenceFields";
 import { PostPreview } from "../../components/PostPreview";
 import {
   Screen,
@@ -152,7 +158,7 @@ function Compose({ id, fresh }: { id: string; fresh: boolean }) {
             {pending.title}
           </Text>
           <Text style={{ color: colors.muted, fontSize: 14, lineHeight: 24 }}>
-            {selected?.name} · {pending.occurredOn} ·{" "}
+            {selected?.name} · {formatOccurrence(pending)} ·{" "}
             {pending.anonymous ? "匿名亲历者" : "使用昵称"}
           </Text>
           <Text style={{ color: colors.ink, fontSize: 16, lineHeight: 28 }}>
@@ -246,13 +252,7 @@ function Compose({ id, fresh }: { id: string; fresh: boolean }) {
             onChangeText={(title) => edit({ title })}
             maxLength={80}
           />
-          <Field
-            label="发生日期（YYYY-MM-DD）"
-            placeholder="例如 2026-10-01"
-            value={content.occurredOn}
-            onChangeText={(occurredOn) => edit({ occurredOn })}
-            maxLength={10}
-          />
+          <OccurrenceFields value={content} onChange={edit} />
           <Field
             label="说说你的亲身经历"
             value={content.body}

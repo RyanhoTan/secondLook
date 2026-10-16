@@ -1,6 +1,6 @@
+import { formatOccurrence, categories } from "@secondlook/contracts";
 import { Text, View } from "react-native";
 import type { PostPreview as Preview } from "@secondlook/compose";
-import { categories } from "@secondlook/contracts";
 import { useApp } from "../lib/context";
 import { Button } from "./ui";
 import { IssueTypes } from "./IssueTypes";
@@ -59,7 +59,7 @@ export function PostPreview({
       >
         {content.title}
       </Text>
-      <Text style={note}>发生日期：{content.occurredOn}</Text>
+      <Text style={note}>发生时间：{formatOccurrence(content)}</Text>
       <Text style={{ color: colors.ink, fontSize: 16 }}>
         对外身份：{content.anonymous ? "匿名亲历者" : nickname}
       </Text>

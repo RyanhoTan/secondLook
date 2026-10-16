@@ -230,9 +230,15 @@ textarea {
   font-size: 1rem;
   line-height: 1.9;
 }
+.occurrence-fields {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
 .detail-page {
   max-width: 740px;
   margin: auto;
+  overflow-wrap: anywhere;
 }
 .detail-header {
   padding: 24px 0 30px;

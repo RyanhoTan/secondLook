@@ -1,6 +1,12 @@
+import {
+  type Occurrence,
+  formatOccurrence,
+  revisionSchema,
+  type RevisionEditor,
+} from "@secondlook/contracts";
+import { OccurrenceFields } from "../components/OccurrenceFields";
 import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router";
-import { revisionSchema, type RevisionEditor } from "@secondlook/contracts";
 import { useSession } from "../lib/session";
 import { useResource } from "../lib/resource";
 import { Feedback, PageHeading } from "../components/ui";
@@ -24,6 +30,11 @@ function RevisionForm({ data }: { data: RevisionEditor }) {
   const { api } = useSession();
   const latest = data.latestRevision;
   const content = latest?.status === "REJECTED" ? latest : data.post;
+  const [occurrence, setOccurrence] = useState<Occurrence>({
+    occurredOn: content.occurredOn,
+    occurredPrecision: content.occurredPrecision,
+    occurredUntil: content.occurredUntil,
+  });
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
@@ -37,7 +48,7 @@ function RevisionForm({ data }: { data: RevisionEditor }) {
       title: form.get("title"),
       issueTypes,
       body: form.get("body"),
-      occurredOn: form.get("occurredOn"),
+      ...occurrence,
       changeReason: form.get("changeReason"),
       baseVersion: data.post.currentVersion,
     });
@@ -74,7 +85,7 @@ function RevisionForm({ data }: { data: RevisionEditor }) {
         <section className="form-surface">
           <h2>{latest.title}</h2>
           <p className="revision-text">{latest.body}</p>
-          <p>发生日期：{latest.occurredOn}</p>
+          <p>发生时间：{formatOccurrence(latest)}</p>
           <IssueTypes value={latest.issueTypes} />
           <p>更正说明：{latest.changeReason}</p>
         </section>
@@ -95,16 +106,10 @@ function RevisionForm({ data }: { data: RevisionEditor }) {
               defaultValue={content.title}
             />
           </label>
-          <label>
-            发生日期
-            <input
-              name="occurredOn"
-              type="date"
-              required
-              defaultValue={content.occurredOn}
-              max={new Date().toISOString().slice(0, 10)}
-            />
-          </label>
+          <OccurrenceFields
+            value={occurrence}
+            onChange={(patch) => setOccurrence({ ...occurrence, ...patch })}
+          />
           <label>
             经历正文
             <textarea

@@ -1,5 +1,9 @@
 import { Router } from "express";
-import { historyVisibilitySchema, revisionSchema } from "@secondlook/contracts";
+import {
+  historyVisibilitySchema,
+  revisionSchema,
+  publicOccurrence,
+} from "@secondlook/contracts";
 import type { Database } from "../db.js";
 import { authenticate, requireAdmin } from "../auth.js";
 import { HttpError } from "../http.js";
@@ -23,6 +27,8 @@ export function revisionRoutes(db: Database) {
           title: true,
           body: true,
           occurredOn: true,
+          occurredPrecision: true,
+          occurredUntil: true,
           currentVersion: true,
           issues: true,
           subject: { select: { category: true } },
@@ -34,6 +40,8 @@ export function revisionRoutes(db: Database) {
               title: true,
               body: true,
               occurredOn: true,
+              occurredPrecision: true,
+              occurredUntil: true,
               issueTypes: true,
               changeReason: true,
               status: true,
@@ -47,12 +55,14 @@ export function revisionRoutes(db: Database) {
       res.json({
         post: {
           ...content,
+          ...publicOccurrence(content),
           issueTypes: postIssues(issues),
           category: subject.category,
         },
         latestRevision: revisions[0]
           ? {
               ...revisions[0],
+              ...publicOccurrence(revisions[0]),
               issueTypes: storedIssues(revisions[0].issueTypes),
             }
           : null,

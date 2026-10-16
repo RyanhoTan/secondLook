@@ -102,6 +102,8 @@ try {
         title: post.title,
         body: post.body,
         occurredOn: post.occurredOn,
+        occurredPrecision: post.occurredPrecision,
+        occurredUntil: post.occurredUntil,
         changeReason: "首次公开",
         status: "PUBLISHED",
         publishedAt: post.publishedAt ?? post.createdAt,

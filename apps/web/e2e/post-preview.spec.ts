@@ -55,7 +55,7 @@ test("previews exact public identity and full text without posting, then returns
   await expect(preview).toContainText("示例 · 山间面馆");
   await expect(preview).toContainText("虚构路 12 号");
   await expect(preview).toContainText("饭店 · 杭州");
-  await expect(preview).toContainText("发生日期：2026-01-01");
+  await expect(preview).toContainText("发生时间：2026-01-01");
   await expect(preview.locator(".preview-identity")).toHaveText(
     "对外身份：匿名亲历者",
   );

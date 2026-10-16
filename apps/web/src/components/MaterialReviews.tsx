@@ -94,7 +94,7 @@ function MaterialReviewItem({
       </p>
       <details>
         <summary>阅读本次复核的正文</summary>
-        <p className="small-note">{item.postOccurredOn}发生</p>
+        <p className="small-note">{item.postOccurrenceLabel}发生</p>
         <p className="revision-text">{item.postBody}</p>
       </details>
       <p className="revision-text">来源与关联：{item.source}</p>

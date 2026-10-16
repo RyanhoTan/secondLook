@@ -1,11 +1,12 @@
-import { Animated, Pressable, Text, View } from "react-native";
-import { router } from "expo-router";
-import Ionicons from "@expo/vector-icons/Ionicons";
 import {
+  formatOccurrence,
   categories,
   evidenceLabels,
   type PublicPost,
 } from "@secondlook/contracts";
+import { Animated, Pressable, Text, View } from "react-native";
+import { router } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useApp } from "../lib/context";
 import { IssueTypes } from "./IssueTypes";
 import { usePressFeedback } from "../lib/interaction";
@@ -141,8 +142,8 @@ export function PostCard({ post }: { post: PublicPost }) {
           <Text style={{ fontSize: 12, color: colors.muted }}>
             {post.authorName}
           </Text>
-          <Text style={{ fontSize: 12, color: colors.muted }}>
-            {post.occurredOn} 发生
+          <Text style={{ fontSize: 12, color: colors.muted, flexShrink: 1 }}>
+            {formatOccurrence(post)} 发生
           </Text>
         </View>
       </Pressable>

@@ -214,6 +214,11 @@ export function Discover() {
             (active.data.occurredFrom || active.data.occurredTo) &&
             `发生日期：${active.data.occurredFrom ?? "不限"} 至 ${active.data.occurredTo ?? "不限"}。`}
           仅统计当前范围内已公开的经历，不代表对象整体评价。
+          {active.success &&
+            (active.data.occurredFrom ||
+              active.data.occurredTo ||
+              active.data.sort !== "PUBLISHED_DESC") &&
+            "时间范围相交即显示；发生时间排序按所填范围起点，不代表确切先后。"}
         </p>
         {posts.error || posts.loading ? (
           <Feedback error={posts.error} loading={posts.loading} />

@@ -1,7 +1,7 @@
+import { formatOccurrence, type PostDetail } from "@secondlook/contracts";
 import { useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { Pressable, Text, View } from "react-native";
-import type { PostDetail } from "@secondlook/contracts";
 import { useApp } from "../../lib/context";
 import { IssueTypes } from "../../components/IssueTypes";
 import { useResource } from "../../lib/resource";
@@ -59,7 +59,7 @@ export default function Detail() {
       </Pressable>
       <Heading
         title={post.title}
-        description={`${post.authorName} · ${post.occurredOn} 发生 · ${post.subject.city}`}
+        description={`${post.authorName} · ${formatOccurrence(post)} 发生 · ${post.subject.city}`}
       />
       <EvidenceTags post={post} />
       <IssueTypes value={post.issueTypes} />

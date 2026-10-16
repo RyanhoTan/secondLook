@@ -1,5 +1,5 @@
+import { formatOccurrence, type PublicRevision } from "@secondlook/contracts";
 import { useState, type FormEvent } from "react";
-import type { PublicRevision } from "@secondlook/contracts";
 import { useSession } from "../lib/session";
 import { date } from "../lib/resource";
 import { PublicMaterials } from "./Materials";
@@ -41,7 +41,7 @@ export function RevisionHistory({
               >
                 <summary>阅读此版本</summary>
                 <h4>{item.title}</h4>
-                <p className="small-note">{item.occurredOn}发生</p>
+                <p className="small-note">{formatOccurrence(item)}发生</p>
                 <p className="revision-text">{item.body}</p>
                 <IssueTypes value={item.issueTypes} />
                 {expanded[item.id] && item.version !== currentVersion && (

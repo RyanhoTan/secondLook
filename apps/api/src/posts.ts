@@ -1,9 +1,10 @@
-import type { Database } from "./db.js";
-import type {
-  Category,
-  EvidenceLevel,
-  PostBrowse,
+import {
+  type Category,
+  type EvidenceLevel,
+  type PostBrowse,
+  publicOccurrence,
 } from "@secondlook/contracts";
+import type { Database } from "./db.js";
 import type { Prisma } from "./generated/prisma/client.js";
 import { HttpError } from "./http.js";
 import { postIssues } from "./issues.js";
@@ -44,6 +45,8 @@ type PostRow = {
   title: string;
   body: string;
   occurredOn: string;
+  occurredPrecision: string;
+  occurredUntil: string;
   anonymous: boolean;
   evidence: string;
   disputed: boolean;
@@ -63,7 +66,7 @@ export function publicPost(post: PostRow) {
     id: post.id,
     title: post.title,
     body: post.body,
-    occurredOn: post.occurredOn,
+    ...publicOccurrence(post),
     issueTypes: postIssues(post.issues),
     createdAt: (post.publishedAt ?? post.createdAt).toISOString(),
     anonymous: post.anonymous,
@@ -114,12 +117,17 @@ export async function searchPosts(db: Database, query: PostBrowse) {
           },
         }
       : {}),
-    ...(occurredFrom || occurredTo
+    ...(occurredTo ? { occurredOn: { lte: occurredTo } } : {}),
+    ...(occurredFrom
       ? {
-          occurredOn: {
-            ...(occurredFrom ? { gte: occurredFrom } : {}),
-            ...(occurredTo ? { lte: occurredTo } : {}),
-          },
+          AND: [
+            {
+              OR: [
+                { occurredUntil: { gte: occurredFrom } },
+                { occurredUntil: "", occurredOn: { gte: occurredFrom } },
+              ],
+            },
+          ],
         }
       : {}),
     ...(q
@@ -202,6 +210,8 @@ export async function reviewItem(
           title: post.title,
           body: post.body,
           occurredOn: post.occurredOn,
+          occurredPrecision: post.occurredPrecision,
+          occurredUntil: post.occurredUntil,
           issueTypes: postIssues(post.issues),
           changeReason: "首次公开",
           status: "PUBLISHED",

@@ -27,6 +27,8 @@ const data = (): PostSubmission => ({
   title: "投稿重试测试：虚构经历",
   body: "这是一条专门用于测试重复投稿与网络结果确认的虚构经历，不涉及真实单位。",
   occurredOn: "2026-01-01",
+  occurredPrecision: "DAY",
+  occurredUntil: "",
   anonymous: true,
   personalExperience: true,
   issueTypes: ["TASTE"],

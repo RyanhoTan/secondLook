@@ -1,5 +1,5 @@
+import { formatOccurrence, type Review } from "@secondlook/contracts";
 import { useState, type FormEvent } from "react";
-import type { Review } from "@secondlook/contracts";
 import { useSession } from "../lib/session";
 import { useResource } from "../lib/resource";
 import { Feedback, PageHeading } from "../components/ui";
@@ -85,7 +85,7 @@ function ReviewItem({ item, onDone }: { item: Review; onDone: () => void }) {
         <details className="review-previous">
           <summary>对照当前公开版本（第 {item.previous.version} 版）</summary>
           <h4>{item.previous.title}</h4>
-          <p>{item.previous.occurredOn}发生</p>
+          <p>{formatOccurrence(item.previous)}发生</p>
           <p className="revision-text">{item.previous.body}</p>
           <IssueTypes value={item.previous.issueTypes} />
         </details>
@@ -94,7 +94,14 @@ function ReviewItem({ item, onDone }: { item: Review; onDone: () => void }) {
         <p className="revision-text">更正说明：{item.changeReason}</p>
       )}
       {item.occurredOn && (
-        <p className="small-note">修改后的发生日期：{item.occurredOn}</p>
+        <p className="small-note">
+          发生时间：
+          {formatOccurrence({
+            occurredOn: item.occurredOn,
+            occurredPrecision: item.occurredPrecision ?? "DAY",
+            occurredUntil: item.occurredUntil ?? "",
+          })}
+        </p>
       )}
       <p className="review-body">{item.body}</p>
       {item.issueTypes && <IssueTypes value={item.issueTypes} />}

@@ -1,3 +1,10 @@
+import {
+  formatOccurrence,
+  categories,
+  evidenceLabels,
+  type Category,
+  type PublicPost,
+} from "@secondlook/contracts";
 import { Link } from "react-router";
 import {
   Building2,
@@ -9,13 +16,6 @@ import {
   AlertCircle,
   Inbox,
 } from "lucide-react";
-import {
-  categories,
-  evidenceLabels,
-  type Category,
-  type PublicPost,
-} from "@secondlook/contracts";
-import { date } from "../lib/resource";
 import { IssueTypes } from "./IssueTypes";
 export function CategoryIcon({
   category,
@@ -103,7 +103,7 @@ export function PostCard({
           </span>
           <span className="record-date">
             <Clock3 size={13} />
-            {date(post.occurredOn)}发生
+            {formatOccurrence(post)}发生
           </span>
           <Link className="record-follow" to={`/posts/${post.id}`}>
             查看后续

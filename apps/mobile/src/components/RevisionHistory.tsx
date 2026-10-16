@@ -1,6 +1,6 @@
+import { formatOccurrence, type PublicRevision } from "@secondlook/contracts";
 import { useState } from "react";
 import { Text, View } from "react-native";
-import type { PublicRevision } from "@secondlook/contracts";
 import { useApp } from "../lib/context";
 import { IssueTypes } from "./IssueTypes";
 import { Button } from "./ui";
@@ -64,7 +64,7 @@ export function RevisionHistory({
                     {item.title}
                   </Text>
                   <Text style={{ color: colors.muted, fontSize: 13 }}>
-                    {item.occurredOn}发生
+                    {formatOccurrence(item)}发生
                   </Text>
                   <Text
                     style={{

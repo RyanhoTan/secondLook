@@ -14,6 +14,8 @@ const empty: DraftContent = {
   title: "",
   body: "",
   occurredOn: "",
+  occurredPrecision: "DAY",
+  occurredUntil: "",
   anonymous: true,
   personalExperience: false,
 };
@@ -23,6 +25,8 @@ const contentOf = (d: DraftContent): DraftContent => ({
   title: d.title,
   body: d.body,
   occurredOn: d.occurredOn,
+  occurredPrecision: d.occurredPrecision,
+  occurredUntil: d.occurredUntil,
   anonymous: d.anonymous,
   personalExperience: d.personalExperience,
 });

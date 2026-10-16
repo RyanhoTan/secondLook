@@ -1,10 +1,13 @@
+import {
+  type PostSubmission,
+  occurrenceBounds,
+  type postSchema,
+} from "@secondlook/contracts";
 import { createHash } from "node:crypto";
-import type { PostSubmission } from "@secondlook/contracts";
 import type { Database } from "./db.js";
 import { HttpError } from "./http.js";
 import { checkIssueCategory } from "./issues.js";
 import type { z } from "zod";
-import type { postSchema } from "@secondlook/contracts";
 
 export function postDigest(data: z.infer<typeof postSchema>) {
   return createHash("sha256")
@@ -16,6 +19,9 @@ export function postDigest(data: z.infer<typeof postSchema>) {
         data.occurredOn,
         data.anonymous,
         [...data.issueTypes].sort(),
+        ...(data.occurredPrecision === "DAY"
+          ? []
+          : [data.occurredPrecision, data.occurredUntil]),
       ]),
     )
     .digest("hex");
@@ -57,6 +63,7 @@ export async function submitPost(
       const post = await tx.post.create({
         data: {
           ...data,
+          ...occurrenceBounds(data),
           issues: { create: issueTypes.map((code) => ({ code })) },
           authorId,
           submissionKey: clientKey,
