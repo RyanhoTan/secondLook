@@ -20,6 +20,7 @@ const statuses: Record<string, string> = {
   APPROVED: "已通过审核",
   REJECTED: "未通过审核",
   WITHDRAWN: "已撤回",
+  NEEDS_REVIEW: "新版待复核",
 };
 function Manager() {
   const { id } = useParams();
@@ -154,6 +155,10 @@ function Manager() {
                   {item.visibility === "PUBLIC" ? "申请公开" : "仅供审核"}
                 </h2>
                 <p className="revision-text">{item.source}</p>
+                <p className="small-note">
+                  上传关联版本：{item.submittedVersion ?? "未记录"} · 当前审核第{" "}
+                  {item.version} 版
+                </p>
                 {item.status !== "WITHDRAWN" && (
                   <details>
                     <summary>查看审核用预览</summary>

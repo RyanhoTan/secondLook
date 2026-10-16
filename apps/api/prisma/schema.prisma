@@ -99,6 +99,9 @@ model Material {
   source String
   visibility String
   status String @default("PENDING")
+  submittedVersion Int?
+  reviewVersion Int @default(1)
+  versions MaterialVersion[]
   originalKey String
   previewKey String
   publicKey String?
@@ -112,6 +115,18 @@ model Material {
   reviewedAt DateTime?
   @@unique([uploaderId,clientKey])
   @@index([postId,status])
+}
+model MaterialVersion {
+  id String @id @default(cuid())
+  materialId String
+  material Material @relation(fields:[materialId],references:[id])
+  version Int
+  status String @default("PENDING")
+  publicKey String?
+  reason String?
+  reviewedAt DateTime?
+  @@unique([materialId,version])
+  @@index([version,status])
 }
 model TimelineEvent {
   id String @id @default(cuid())

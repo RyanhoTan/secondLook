@@ -8,11 +8,13 @@ export function MaterialImage({
   variant = "public",
   alt,
   onLoad,
+  version,
 }: {
   id: string;
   variant?: "public" | "preview";
   alt: string;
   onLoad?: () => void;
+  version?: number;
 }) {
   const { api } = useSession();
   const [url, setUrl] = useState("");
@@ -22,10 +24,13 @@ export function MaterialImage({
     let local = "";
     setUrl("");
     setError("");
-    api<Blob>(`/materials/${id}/${variant}`, {
-      responseType: "blob",
-      signal: controller.signal,
-    })
+    api<Blob>(
+      `/materials/${id}/${variant}${version ? `?version=${version}` : ""}`,
+      {
+        responseType: "blob",
+        signal: controller.signal,
+      },
+    )
       .then((blob) => {
         if (!controller.signal.aborted) {
           local = URL.createObjectURL(blob);
@@ -39,7 +44,7 @@ export function MaterialImage({
       controller.abort();
       if (local) URL.revokeObjectURL(local);
     };
-  }, [id, variant, api]);
+  }, [id, variant, api, version]);
   return error ? (
     <p role="alert" className="error">
       {error}
@@ -53,8 +58,16 @@ export function MaterialImage({
   );
 }
 
-export function PublicMaterials({ postId }: { postId: string }) {
-  const resource = useResource<PublicMaterial[]>(`/posts/${postId}/materials`);
+export function PublicMaterials({
+  postId,
+  version,
+}: {
+  postId: string;
+  version?: number;
+}) {
+  const resource = useResource<PublicMaterial[]>(
+    `/posts/${postId}/materials${version ? `?version=${version}` : ""}`,
+  );
   if (resource.error)
     return (
       <p role="alert" className="error">
@@ -70,8 +83,14 @@ export function PublicMaterials({ postId }: { postId: string }) {
       </p>
       {resource.data.map((item) => (
         <figure key={item.id}>
-          <MaterialImage id={item.id} alt="审核通过的公开材料" />
-          <figcaption>{item.source}</figcaption>
+          <MaterialImage
+            id={item.id}
+            version={item.version}
+            alt="审核通过的公开材料"
+          />
+          <figcaption>
+            对应第 {item.version} 版 · {item.source}
+          </figcaption>
         </figure>
       ))}
     </section>

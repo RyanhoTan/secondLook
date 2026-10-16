@@ -84,6 +84,7 @@ export const materialReviewSchema = z
     reason: z.string().trim().min(2).max(500),
     privacyChecked: z.boolean(),
     redactions: z.array(redactionSchema).max(30),
+    baseVersion: z.number().int().min(1).default(1),
   })
   .refine(
     (v) => v.action === "REJECT" || v.privacyChecked,
@@ -96,17 +97,24 @@ export type PublicMaterial = {
   width: number;
   height: number;
   createdAt: string;
+  version: number;
 };
 export type OwnMaterial = PublicMaterial & {
   visibility: "PUBLIC" | "REVIEW_ONLY";
   status: string;
   reason: string | null;
+  submittedVersion: number | null;
 };
 export type MaterialReview = OwnMaterial & {
   postId: string;
   postTitle: string;
   subjectName: string;
+  postBody: string;
+  postOccurredOn: string;
 };
+export const materialVersionQuerySchema = z.object({
+  version: z.coerce.number().int().min(1).optional(),
+});
 export const decisionSchema = z.object({
   action: z.enum(["APPROVE", "REJECT"]),
   reason: z.string().trim().min(2).max(500),

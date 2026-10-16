@@ -120,6 +120,7 @@ function Manager() {
     APPROVED: "已通过审核",
     REJECTED: "未通过审核",
     WITHDRAWN: "已撤回",
+    NEEDS_REVIEW: "新版待复核",
   };
   return (
     <Screen>
@@ -190,6 +191,12 @@ function Manager() {
               </Text>
               <Text style={{ color: colors.ink, fontSize: 15, lineHeight: 26 }}>
                 {item.source}
+              </Text>
+              <Text
+                style={{ color: colors.muted, fontSize: 13, lineHeight: 23 }}
+              >
+                上传关联版本：{item.submittedVersion ?? "未记录"} · 当前审核第{" "}
+                {item.version} 版
               </Text>
               {item.status !== "WITHDRAWN" && (
                 <MaterialImage item={item} variant="preview" />

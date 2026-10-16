@@ -5,6 +5,7 @@ import {
   materialLimits,
   materialReviewSchema,
   materialSchema,
+  materialVersionQuerySchema,
 } from "@secondlook/contracts";
 import type { Database } from "../db.js";
 import { authenticate, requireAdmin } from "../auth.js";
@@ -16,6 +17,7 @@ import {
   reviewMaterial,
   uploadMaterial,
   withdrawMaterial,
+  readableMaterialVersion,
 } from "../materials.js";
 
 export function materialRoutes(db: Database, files: MaterialFiles) {
@@ -57,15 +59,21 @@ export function materialRoutes(db: Database, files: MaterialFiles) {
   );
   router.get("/posts/:id/materials", async (req, res) => {
     const postId = String(req.params.id);
-    if (
-      !(await db.post.findFirst({ where: { id: postId, status: "PUBLISHED" } }))
-    )
-      throw new HttpError(404, "记录尚未公开");
-    const items = await db.material.findMany({
-      where: { postId, status: "APPROVED", visibility: "PUBLIC" },
-      orderBy: { createdAt: "asc" },
+    const { version: requested } = materialVersionQuerySchema.parse(req.query);
+    const payload = await db.$transaction(async (tx) => {
+      const version = await readableMaterialVersion(tx, postId, requested);
+      const items = await tx.material.findMany({
+        where: {
+          postId,
+          status: { not: "WITHDRAWN" },
+          visibility: "PUBLIC",
+          versions: { some: { version, status: "APPROVED" } },
+        },
+        orderBy: { createdAt: "asc" },
+      });
+      return items.map((item) => publicMaterial(item, version));
     });
-    res.json(items.map(publicMaterial));
+    res.json(payload);
   });
   router.get(
     "/me/posts/:id/materials",
@@ -98,14 +106,21 @@ export function materialRoutes(db: Database, files: MaterialFiles) {
     let key: string,
       mime = "image/webp";
     if (variant === "public") {
+      const { version: requested } = materialVersionQuerySchema.parse(
+        req.query,
+      );
+      const version = await readableMaterialVersion(db, item.postId, requested);
+      const assessment = await db.materialVersion.findUnique({
+        where: { materialId_version: { materialId: item.id, version } },
+      });
       if (
-        item.status !== "APPROVED" ||
+        item.status === "WITHDRAWN" ||
         item.visibility !== "PUBLIC" ||
-        !item.publicKey ||
-        item.post.status !== "PUBLISHED"
+        assessment?.status !== "APPROVED" ||
+        !assessment.publicKey
       )
         throw new HttpError(404, "图片尚未公开或已撤回");
-      key = item.publicKey;
+      key = assessment.publicKey;
     } else {
       if (!res.locals.user) throw new HttpError(401, "请先登录");
       if (
@@ -148,7 +163,7 @@ export function materialRoutes(db: Database, files: MaterialFiles) {
     async (_req, res) => {
       const items = await db.material.findMany({
         where: {
-          status: "PENDING",
+          status: { in: ["PENDING", "NEEDS_REVIEW"] },
           post: { status: { in: ["PENDING", "PUBLISHED"] } },
         },
         include: { post: { include: { subject: true } } },
@@ -161,6 +176,8 @@ export function materialRoutes(db: Database, files: MaterialFiles) {
           postId: item.postId,
           postTitle: item.post.title,
           subjectName: item.post.subject.name,
+          postBody: item.post.body,
+          postOccurredOn: item.post.occurredOn,
         })),
       );
     },

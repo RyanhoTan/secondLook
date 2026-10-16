@@ -18,7 +18,9 @@ export function MaterialImage({
     <Message error="图片暂时无法读取，请返回页面重试。" />
   ) : (
     <Image
-      source={imageSource(`/materials/${item.id}/${variant}`)}
+      source={imageSource(
+        `/materials/${item.id}/${variant}?version=${item.version}`,
+      )}
       accessibilityLabel={
         variant === "public"
           ? "审核通过的公开材料"
@@ -34,9 +36,17 @@ export function MaterialImage({
     />
   );
 }
-export function PublicMaterials({ postId }: { postId: string }) {
+export function PublicMaterials({
+  postId,
+  version,
+}: {
+  postId: string;
+  version?: number;
+}) {
   const { colors } = useApp();
-  const resource = useResource<PublicMaterial[]>(`/posts/${postId}/materials`);
+  const resource = useResource<PublicMaterial[]>(
+    `/posts/${postId}/materials${version ? `?version=${version}` : ""}`,
+  );
   if (resource.error) return <Message error={resource.error} />;
   if (!resource.data?.length) return null;
   return (
@@ -51,7 +61,7 @@ export function PublicMaterials({ postId }: { postId: string }) {
         <View key={item.id} style={{ gap: 12 }}>
           <MaterialImage item={item} />
           <Text style={{ color: colors.ink, fontSize: 15, lineHeight: 26 }}>
-            {item.source}
+            对应第 {item.version} 版 · {item.source}
           </Text>
         </View>
       ))}

@@ -40,7 +40,7 @@ function ReviewQueue() {
       ) : (
         <Feedback empty="当前没有待审文字内容。" />
       )}
-      <MaterialReviews />
+      <MaterialReviews refreshKey={version} />
     </>
   );
 }

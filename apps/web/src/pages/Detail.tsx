@@ -70,7 +70,7 @@ export function Detail() {
           <p key={i}>{p}</p>
         ))}
       </div>
-      <PublicMaterials postId={data.id} />
+      <PublicMaterials postId={data.id} version={data.currentVersion} />
       <div className="detail-follow">
         <div>
           <h3>故事还在继续</h3>
@@ -120,6 +120,7 @@ export function Detail() {
         ))}
       </section>
       <RevisionHistory
+        postId={data.id}
         history={data.history}
         currentVersion={data.currentVersion}
         onChange={() => setVersion((v) => v + 1)}

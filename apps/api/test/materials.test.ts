@@ -462,6 +462,7 @@ describe("private originals, reviewed copies and upload recovery", () => {
             action: "APPROVE",
             reason: "测试审核通过",
             privacyChecked: true,
+            baseVersion: 1,
             redactions: [],
           },
         ),

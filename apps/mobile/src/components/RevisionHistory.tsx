@@ -3,13 +3,16 @@ import { Text, View } from "react-native";
 import type { PublicRevision } from "@secondlook/contracts";
 import { useApp } from "../lib/context";
 import { Button } from "./ui";
+import { PublicMaterials } from "./Materials";
 
 export function RevisionHistory({
   history,
   currentVersion,
+  postId,
 }: {
   history: PublicRevision[];
   currentVersion: number;
+  postId: string;
 }) {
   const { colors } = useApp();
   const [open, setOpen] = useState(false);
@@ -71,6 +74,9 @@ export function RevisionHistory({
                   >
                     {item.body}
                   </Text>
+                  {item.version !== currentVersion && (
+                    <PublicMaterials postId={postId} version={item.version} />
+                  )}
                 </>
               ) : (
                 <Text style={{ color: colors.muted, fontSize: 15 }}>

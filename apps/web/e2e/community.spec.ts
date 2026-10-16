@@ -737,3 +737,153 @@ test("search past fifty objects and page personal and subject records without lo
     page.getByRole("link", { name: /菜单标注与实际收费不一致/ }),
   ).toBeVisible();
 });
+
+test("reassess materials for corrected text while retaining historical approvals", async ({
+  page,
+  browser,
+}) => {
+  const username = `material_version_${Date.now()}`,
+    password = "test-only-version-2026";
+  const account = await (
+    await page.request.post("/api/v1/auth/register", {
+      data: { username, password, nickname: "材料版本测试作者" },
+    })
+  ).json();
+  const adminAccount = await (
+    await page.request.post("/api/v1/auth/login", {
+      data: { username: "admin", password: "test-only-admin-2026" },
+    })
+  ).json();
+  const post = await (
+    await page.request.post("/api/v1/posts", {
+      headers: { Authorization: `Bearer ${account.token}` },
+      data: {
+        subjectId: "demo-noodle",
+        title: "版本关联浏览器测试：虚构经历",
+        body: "这是一条用于材料关联第一版正文的虚构经历，后续会更正其中的描述。",
+        occurredOn: "2026-01-01",
+        anonymous: true,
+        personalExperience: true,
+      },
+    })
+  ).json();
+  await page.request.post(`/api/v1/admin/reviews/POST/${post.id}/decision`, {
+    headers: { Authorization: `Bearer ${adminAccount.token}` },
+    data: { action: "APPROVE", reason: "虚构正文审核通过" },
+  });
+  await login(page, username, password);
+  const image = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 120;
+    canvas.height = 60;
+    return canvas.toDataURL("image/png");
+  });
+  await page.getByRole("link", { name: "我的记录", exact: true }).click();
+  await page
+    .getByRole("link", { name: "添加 / 管理图片材料", exact: true })
+    .click();
+  await page
+    .getByLabel("选择图片", { exact: true })
+    .setInputFiles({
+      name: "version.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(image.split(",")[1], "base64"),
+    });
+  await page
+    .getByLabel("来源与关联说明")
+    .fill("版本关联测试：这份虚构材料需要针对正文重新核对。");
+  await page.getByRole("button", { name: "上传材料", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "等待审核 · 申请公开" }),
+  ).toBeVisible();
+  const context = await browser.newContext({
+    baseURL: new URL(page.url()).origin,
+  });
+  try {
+    const admin = await context.newPage();
+    await login(admin, "admin", "test-only-admin-2026");
+    await admin.getByRole("link", { name: "内容审核" }).click();
+    const material = admin
+      .locator(".material-review-item")
+      .filter({ hasText: "版本关联浏览器测试" });
+    await expect(material).toContainText("本次复核第 1 版");
+    await material
+      .getByLabel("材料审核说明")
+      .fill("仅支持第一版描述，虚构材料通过。");
+    await material
+      .getByLabel("已检查图片、来源说明的隐私与相关性；公开副本遮挡范围完整。")
+      .check();
+    await material
+      .getByRole("button", { name: "通过并公开副本", exact: true })
+      .click();
+    await expect(material).toHaveCount(0);
+    await page.getByRole("link", { name: "返回我的记录", exact: true }).click();
+    await page
+      .getByRole("link", { name: "修改原文 / 查看审核", exact: true })
+      .click();
+    await page
+      .getByLabel("经历正文")
+      .fill(
+        "这是第二版虚构正文，需要重新核对收费说明，旧材料不能未经复核就支持这个版本。",
+      );
+    await page
+      .getByLabel("更正说明", { exact: true })
+      .fill("更正具体描述，材料相关性需重新检查。");
+    await page.getByRole("button", { name: "提交修改审核" }).click();
+    await expect(
+      page.getByRole("heading", { name: "修改已提交" }),
+    ).toBeVisible();
+    await admin.getByRole("link", { name: "发现经历", exact: true }).click();
+    await admin.getByRole("link", { name: "内容审核" }).click();
+    const revision = admin
+      .locator(".review-item")
+      .filter({ hasText: "版本关联浏览器测试" });
+    await revision
+      .getByLabel("审核说明", { exact: true })
+      .fill("虚构修订通过，材料需要新版复核。");
+    await revision
+      .getByRole("button", { name: "通过并公开", exact: true })
+      .click();
+    await expect(material).toContainText("本次复核第 2 版");
+    await material.getByText("阅读本次复核的正文", { exact: true }).click();
+    await expect(material).toContainText("这是第二版虚构正文");
+    await page.getByRole("link", { name: "返回公开记录", exact: true }).click();
+    await expect(page.locator(".detail-header .tag")).toHaveText("仅本人陈述");
+    await expect(page.locator(".detail-page > .public-materials")).toHaveCount(
+      0,
+    );
+    await page.locator(".revision-history > summary").click();
+    const first = page
+      .locator(".revision-history article")
+      .filter({ hasText: "第 1 版" });
+    await first.getByText("阅读此版本", { exact: true }).click();
+    await expect(first.locator(".public-materials")).toContainText(
+      "对应第 1 版",
+    );
+    await expect(first.locator("img")).toBeVisible();
+    await material
+      .getByLabel("材料审核说明")
+      .fill("重新阅读第二版后，确认材料仍相关，隐私检查通过。");
+    await material
+      .getByLabel("已检查图片、来源说明的隐私与相关性；公开副本遮挡范围完整。")
+      .check();
+    await material
+      .getByRole("button", { name: "通过并公开副本", exact: true })
+      .click();
+    await expect(material).toHaveCount(0);
+    await page.getByRole("link", { name: "发现经历", exact: true }).click();
+    await page
+      .getByRole("link", { name: /版本关联浏览器测试：虚构经历/ })
+      .click();
+    await expect(page.locator(".detail-header .tag")).toHaveText("已附材料");
+    await expect(
+      page.locator(".detail-page > .public-materials"),
+    ).toContainText("对应第 2 版");
+    await page.screenshot({
+      path: "test-results/material-version-review.png",
+      fullPage: true,
+    });
+  } finally {
+    await context.close();
+  }
+});

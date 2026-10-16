@@ -2,16 +2,20 @@ import { useState, type FormEvent } from "react";
 import type { PublicRevision } from "@secondlook/contracts";
 import { useSession } from "../lib/session";
 import { date } from "../lib/resource";
+import { PublicMaterials } from "./Materials";
 
 export function RevisionHistory({
   history,
   currentVersion,
   onChange,
+  postId,
 }: {
   history: PublicRevision[];
   currentVersion: number;
   onChange: () => void;
+  postId: string;
 }) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   return (
     <details className="revision-history">
       <summary>版本历史 · 当前第 {currentVersion} 版</summary>
@@ -28,11 +32,19 @@ export function RevisionHistory({
           {item.visible ? (
             <>
               <p className="revision-text">{item.changeReason}</p>
-              <details>
+              <details
+                onToggle={(e) => {
+                  const open = e.currentTarget.open;
+                  setExpanded((state) => ({ ...state, [item.id]: open }));
+                }}
+              >
                 <summary>阅读此版本</summary>
                 <h4>{item.title}</h4>
                 <p className="small-note">{item.occurredOn}发生</p>
                 <p className="revision-text">{item.body}</p>
+                {expanded[item.id] && item.version !== currentVersion && (
+                  <PublicMaterials postId={postId} version={item.version} />
+                )}
               </details>
               {item.version !== currentVersion && (
                 <HideHistory id={item.id} onChange={onChange} />

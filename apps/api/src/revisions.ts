@@ -2,6 +2,7 @@ import type { z } from "zod";
 import type { revisionSchema } from "@secondlook/contracts";
 import type { Database } from "./db.js";
 import { HttpError } from "./http.js";
+import { scheduleMaterialReviews } from "./materials.js";
 
 export const revisionSelect = {
   id: true,
@@ -134,6 +135,7 @@ export async function reviewRevision(
     });
     if (postChanged.count !== 1)
       throw new HttpError(409, "公开版本已变化，未发布本次修改");
+    await scheduleMaterialReviews(tx, revision.postId, version);
     const event = await tx.timelineEvent.create({
       data: {
         postId: revision.postId,

@@ -89,7 +89,7 @@ export default function Detail() {
       >
         {post.body}
       </Text>
-      <PublicMaterials postId={post.id} />
+      <PublicMaterials postId={post.id} version={post.currentVersion} />
       <View
         style={{
           padding: 20,
@@ -134,6 +134,7 @@ export default function Detail() {
         </View>
       ))}
       <RevisionHistory
+        postId={post.id}
         history={post.history}
         currentVersion={post.currentVersion}
       />

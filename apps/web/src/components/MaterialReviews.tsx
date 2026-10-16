@@ -9,9 +9,12 @@ import { useSession } from "../lib/session";
 import { Feedback } from "./ui";
 import { RedactionEditor } from "./RedactionEditor";
 
-export function MaterialReviews() {
+export function MaterialReviews({ refreshKey = 0 }: { refreshKey?: number }) {
   const [version, setVersion] = useState(0);
-  const resource = useResource<MaterialReview[]>("/admin/materials", version);
+  const resource = useResource<MaterialReview[]>(
+    "/admin/materials",
+    version + refreshKey,
+  );
   return (
     <section className="material-reviews" aria-label="材料审核">
       <h2>图片材料审核</h2>
@@ -58,6 +61,7 @@ function MaterialReviewItem({
       reason: form.get("reason"),
       privacyChecked: form.get("privacyChecked") === "on",
       redactions,
+      baseVersion: item.version,
     });
     if (!checked.success) {
       setError(checked.error.issues[0].message);
@@ -84,6 +88,15 @@ function MaterialReviewItem({
         {item.visibility === "PUBLIC" ? "申请公开" : "仅供审核，不会公开"}
       </span>
       <h3>{item.postTitle}</h3>
+      <p className="small-note">
+        本次复核第 {item.version} 版；上传关联版本：
+        {item.submittedVersion ?? "未记录"}。
+      </p>
+      <details>
+        <summary>阅读本次复核的正文</summary>
+        <p className="small-note">{item.postOccurredOn}发生</p>
+        <p className="revision-text">{item.postBody}</p>
+      </details>
       <p className="revision-text">来源与关联：{item.source}</p>
       <RedactionEditor
         id={item.id}

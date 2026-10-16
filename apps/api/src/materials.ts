@@ -9,19 +9,41 @@ import type { Material, Prisma } from "./generated/prisma/client.js";
 import { HttpError } from "./http.js";
 import { MaterialFiles, prepareImage } from "./material-files.js";
 
-export const publicMaterial = (m: Material) => ({
+export const publicMaterial = (m: Material, version = m.reviewVersion) => ({
   id: m.id,
   source: m.source,
   width: m.width,
   height: m.height,
   createdAt: m.createdAt.toISOString(),
+  version,
 });
 export const ownMaterial = (m: Material) => ({
   ...publicMaterial(m),
   visibility: m.visibility,
   status: m.status,
   reason: m.reason,
+  submittedVersion: m.submittedVersion,
 });
+
+export async function readableMaterialVersion(
+  db: Pick<Database, "post" | "postRevision">,
+  postId: string,
+  requested?: number,
+) {
+  const post = await db.post.findFirst({
+    where: { id: postId, status: "PUBLISHED" },
+  });
+  if (!post) throw new HttpError(404, "记录尚未公开");
+  const version = requested ?? post.currentVersion;
+  if (
+    version !== post.currentVersion &&
+    !(await db.postRevision.findFirst({
+      where: { postId, version, status: "PUBLISHED", visible: true },
+    }))
+  )
+    throw new HttpError(404, "该版本不存在或已限制公开");
+  return version;
+}
 
 export async function uploadMaterial(
   db: Database,
@@ -43,15 +65,14 @@ export async function uploadMaterial(
   const keys: string[] = [];
   try {
     const result = await db.$transaction(async (tx) => {
-      if (
-        !(await tx.post.findFirst({
-          where: {
-            id: postId,
-            authorId: uploaderId,
-            status: { in: ["PENDING", "PUBLISHED"] },
-          },
-        }))
-      )
+      const currentPost = await tx.post.findFirst({
+        where: {
+          id: postId,
+          authorId: uploaderId,
+          status: { in: ["PENDING", "PUBLISHED"] },
+        },
+      });
+      if (!currentPost)
         throw new HttpError(404, "记录状态已变化，无法继续上传");
       const duplicate = await tx.material.findUnique({
         where: {
@@ -75,7 +96,14 @@ export async function uploadMaterial(
       }
       if (
         (await tx.material.count({
-          where: { postId, status: { in: ["PENDING", "APPROVED"] } },
+          where: {
+            postId,
+            status: { not: "WITHDRAWN" },
+            OR: [
+              { status: { in: ["PENDING", "APPROVED", "NEEDS_REVIEW"] } },
+              { versions: { some: { status: "APPROVED" } } },
+            ],
+          },
         })) >= materialLimits.maxPerPost
       )
         throw new HttpError(409, "每条经历最多保留 6 份待审或通过的材料");
@@ -95,6 +123,9 @@ export async function uploadMaterial(
           width: image.width,
           height: image.height,
           size: bytes.length,
+          submittedVersion: currentPost.currentVersion,
+          reviewVersion: currentPost.currentVersion,
+          versions: { create: { version: currentPost.currentVersion } },
         },
       });
     });
@@ -105,15 +136,56 @@ export async function uploadMaterial(
   }
 }
 
-async function updateEvidence(tx: Prisma.TransactionClient, postId: string) {
-  const count = await tx.material.count({
-    where: { postId, status: "APPROVED", visibility: "PUBLIC" },
+export async function updateMaterialEvidence(
+  tx: Prisma.TransactionClient,
+  postId: string,
+) {
+  const post = await tx.post.findUniqueOrThrow({ where: { id: postId } });
+  const count = await tx.materialVersion.count({
+    where: {
+      version: post.currentVersion,
+      status: "APPROVED",
+      material: { postId, status: { not: "WITHDRAWN" }, visibility: "PUBLIC" },
+    },
   });
   // Independent corroboration is managed separately; raw upload counts cannot grant it.
   await tx.post.updateMany({
     where: { id: postId, evidence: { in: ["STATEMENT", "MATERIAL"] } },
     data: { evidence: count ? "MATERIAL" : "STATEMENT" },
   });
+}
+
+export async function scheduleMaterialReviews(
+  tx: Prisma.TransactionClient,
+  postId: string,
+  version: number,
+) {
+  const items = await tx.material.findMany({
+    where: {
+      postId,
+      status: { not: "WITHDRAWN" },
+      OR: [
+        { status: { in: ["PENDING", "APPROVED", "NEEDS_REVIEW"] } },
+        { versions: { some: { status: "APPROVED" } } },
+      ],
+    },
+  });
+  for (const item of items) {
+    await tx.materialVersion.updateMany({
+      where: { materialId: item.id, status: "PENDING" },
+      data: { status: "SUPERSEDED" },
+    });
+    await tx.materialVersion.create({ data: { materialId: item.id, version } });
+    await tx.material.update({
+      where: { id: item.id },
+      data: {
+        reviewVersion: version,
+        status: "NEEDS_REVIEW",
+        reason: "正文已更正，需针对当前版本重新复核材料",
+      },
+    });
+  }
+  await updateMaterialEvidence(tx, postId);
 }
 
 export async function reviewMaterial(
@@ -126,11 +198,13 @@ export async function reviewMaterial(
   const item = await db.material.findFirst({
     where: {
       id,
-      status: "PENDING",
+      status: { in: ["PENDING", "NEEDS_REVIEW"] },
       post: { status: { in: ["PENDING", "PUBLISHED"] } },
     },
   });
   if (!item) throw new HttpError(409, "该材料已处理或无法审核");
+  if (item.reviewVersion !== data.baseVersion)
+    throw new HttpError(409, "待审核版本已变化，请刷新队列后重试");
   let publicKey: string | null = null;
   try {
     if (data.action === "APPROVE" && item.visibility === "PUBLIC") {
@@ -147,8 +221,12 @@ export async function reviewMaterial(
       const changed = await tx.material.updateMany({
         where: {
           id,
-          status: "PENDING",
-          post: { status: { in: ["PENDING", "PUBLISHED"] } },
+          status: { in: ["PENDING", "NEEDS_REVIEW"] },
+          reviewVersion: data.baseVersion,
+          post: {
+            status: { in: ["PENDING", "PUBLISHED"] },
+            currentVersion: data.baseVersion,
+          },
         },
         data: {
           status: data.action === "APPROVE" ? "APPROVED" : "REJECTED",
@@ -159,6 +237,17 @@ export async function reviewMaterial(
       });
       if (changed.count !== 1)
         throw new HttpError(409, "材料已处理，请刷新审核队列");
+      const assessment = await tx.materialVersion.updateMany({
+        where: { materialId: id, version: data.baseVersion, status: "PENDING" },
+        data: {
+          status: data.action === "APPROVE" ? "APPROVED" : "REJECTED",
+          publicKey,
+          reason: data.reason,
+          reviewedAt: new Date(),
+        },
+      });
+      if (assessment.count !== 1)
+        throw new HttpError(409, "版本审核记录已变化，请刷新后重试");
       await tx.auditLog.create({
         data: {
           actorId,
@@ -168,10 +257,11 @@ export async function reviewMaterial(
             reason: data.reason,
             privacyChecked: data.privacyChecked,
             redactions: data.redactions,
+            version: data.baseVersion,
           }),
         },
       });
-      await updateEvidence(tx, item.postId);
+      await updateMaterialEvidence(tx, item.postId);
       if (data.action === "APPROVE" && item.visibility === "PUBLIC") {
         const post = await tx.post.findUniqueOrThrow({
           where: { id: item.postId },
@@ -180,8 +270,11 @@ export async function reviewMaterial(
           const event = await tx.timelineEvent.create({
             data: {
               postId: item.postId,
-              title: "新增一份公开材料",
-              body: "材料已通过相关性与隐私检查，可在详情查看。材料通过不等于事实已被证实。",
+              title:
+                item.status === "NEEDS_REVIEW"
+                  ? `材料已完成第 ${data.baseVersion} 版复核`
+                  : "新增一份公开材料",
+              body: `材料已针对第 ${data.baseVersion} 版完成相关性与隐私检查，可在详情查看。材料通过不等于事实已被证实。`,
               kind: "MATERIAL_APPROVED",
             },
           });
@@ -214,7 +307,7 @@ export async function withdrawMaterial(
       where: {
         id,
         uploaderId: userId,
-        status: { in: ["PENDING", "APPROVED", "REJECTED"] },
+        status: { in: ["PENDING", "APPROVED", "REJECTED", "NEEDS_REVIEW"] },
       },
     });
     if (!item) throw new HttpError(404, "材料不存在或已撤回");
@@ -227,8 +320,13 @@ export async function withdrawMaterial(
         reason: "提交者撤回材料",
       },
     });
-    await updateEvidence(tx, item.postId);
-    if (item.status === "APPROVED" && item.visibility === "PUBLIC") {
+    await updateMaterialEvidence(tx, item.postId);
+    if (
+      item.visibility === "PUBLIC" &&
+      (await tx.materialVersion.count({
+        where: { materialId: id, status: "APPROVED" },
+      }))
+    ) {
       const event = await tx.timelineEvent.create({
         data: {
           postId: item.postId,
