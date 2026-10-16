@@ -89,6 +89,7 @@ API 和维护工具共用 `*.secondlook.lock`；遇到锁占用先停止对应�
 | `npm run lint`                      | App 的 Expo ESLint 检查                   |
 | `npm test`                          | 后端集成测试，使用独立临时数据库          |
 | `npm run build`                     | 构建网页                                  |
+| `npm audit`                         | 获取实时依赖告警；当前仍有未解决项，见审计记录 |
 | `npm run export:mobile`             | 导出安卓与 iOS JS bundle，不生成安装包    |
 | `npm run test:e2e`                  | 网页浏览器回归测试，启动独立 API 与数据库 |
 | `npm run db:migrate -- --name 描述` | 修改 schema 后创建本地迁移                |
@@ -103,6 +104,7 @@ API 和维护工具共用 `*.secondlook.lock`；遇到锁占用先停止对应�
 - `packages/contracts`：共享请求校验、公开类型及轻量请求工具，不共享服务端模型。
 - [第一版完工验收清单](docs/acceptance.md)：统一范围、逐项状态、验收门槛与待决策事项。
 - [产品需求](docs/product.md)、[开发方案](docs/development.md)、[实际进展与验证](docs/progress.md)。
+- [依赖审计与修复](docs/dependency-audit.md)：当前告警、依赖路径、原生包内核对和后续处理入口。
 - [Apple Design 技能全文](docs/design/apple-design-skill.md)、[产品 UI 规范](docs/design/ui-spec.md)。
 
 本地 Git 已按步骤提交，尚未创建 GitHub 远程或推送；许可证待用户选择。Codex 侧栏项目注册需要在应用中添加此目录，现有工具不能替代该操作。
