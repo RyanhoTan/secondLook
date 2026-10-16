@@ -60,15 +60,19 @@ beforeAll(async () => {
     .toBuffer();
 }, 30000);
 beforeEach(async () => {
-  const post = await request(app).post("/api/v1/posts").set(auth(author)).send({
-    clientKey: randomUUID(),
-    subjectId,
-    title: "版本材料：虚构的原始经历",
-    body: "这是一条用于版本材料关联验证的虚构经历，初始描述仅适用于第一版正文。",
-    occurredOn: "2026-01-01",
-    anonymous: true,
-    personalExperience: true,
-  });
+  const post = await request(app)
+    .post("/api/v1/posts")
+    .set(auth(author))
+    .send({
+      clientKey: randomUUID(),
+      subjectId,
+      title: "版本材料：虚构的原始经历",
+      body: "这是一条用于版本材料关联验证的虚构经历，初始描述仅适用于第一版正文。",
+      occurredOn: "2026-01-01",
+      anonymous: true,
+      personalExperience: true,
+      issueTypes: ["TASTE"],
+    });
   postId = post.body.id;
   expect(
     (
@@ -111,6 +115,7 @@ async function revision(baseVersion: number, approve = true) {
     .set(auth(author))
     .send({
       baseVersion,
+      issueTypes: ["TASTE"],
       title: `版本材料：更正后的第 ${baseVersion + 1} 版`,
       body: `这是一条虚构的修订正文，现在说明第 ${baseVersion + 1} 版中的新情况，需要重新检查材料相关性。`,
       occurredOn: "2026-01-02",

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Text, View } from "react-native";
 import type { PublicRevision } from "@secondlook/contracts";
 import { useApp } from "../lib/context";
+import { IssueTypes } from "./IssueTypes";
 import { Button } from "./ui";
 import { PublicMaterials } from "./Materials";
 
@@ -74,6 +75,7 @@ export function RevisionHistory({
                   >
                     {item.body}
                   </Text>
+                  <IssueTypes value={item.issueTypes} />
                   {item.version !== currentVersion && (
                     <PublicMaterials postId={postId} version={item.version} />
                   )}

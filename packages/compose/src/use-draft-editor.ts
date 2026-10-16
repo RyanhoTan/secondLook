@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   postSchema,
+  issuesMatchCategory,
   type DraftContent,
   type PostDraft,
   type Subject,
@@ -8,6 +9,7 @@ import {
 import { ApiError, type createClient } from "@secondlook/contracts/client";
 
 const empty: DraftContent = {
+  issueTypes: [],
   subjectId: null,
   title: "",
   body: "",
@@ -16,6 +18,7 @@ const empty: DraftContent = {
   personalExperience: false,
 };
 const contentOf = (d: DraftContent): DraftContent => ({
+  issueTypes: d.issueTypes,
   subjectId: d.subjectId,
   title: d.title,
   body: d.body,
@@ -100,7 +103,14 @@ export function useDraftEditor(
   }, []);
   function selectSubject(value: Subject | null) {
     setSubject(value);
-    edit({ subjectId: value?.id ?? null });
+    edit({
+      subjectId: value?.id ?? null,
+      issueTypes: value
+        ? current.current.issueTypes.filter((issue) =>
+            issuesMatchCategory(value.category, [issue]),
+          )
+        : [],
+    });
   }
 
   const save = useCallback(async (): Promise<PostDraft> => {

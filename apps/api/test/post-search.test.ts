@@ -254,6 +254,7 @@ it("uses only approved correction dates in filtering and occurrence sorting", as
       body: "核对后将发生日期更正为二月，材料仅为测试，不对应任何真实单位或个人。",
       occurredOn: "2026-02-01",
       baseVersion: 1,
+      issueTypes: ["TASTE"],
       changeReason: "虚构日期的更正说明，用于验证公开筛选。",
     });
   expect(revision.status).toBe(201);

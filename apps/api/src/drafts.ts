@@ -2,6 +2,7 @@ import type { z } from "zod";
 import { postSchema, type saveDraftSchema } from "@secondlook/contracts";
 import type { Database } from "./db.js";
 import { HttpError } from "./http.js";
+import { checkIssueCategory, storedIssues } from "./issues.js";
 import { publicSubject, subjectInclude } from "./posts.js";
 import { postDigest } from "./submissions.js";
 import type { Prisma } from "./generated/prisma/client.js";
@@ -14,6 +15,7 @@ export const ownDraft = (d: DraftRow) => ({
   body: d.body,
   subjectId: d.subjectId,
   occurredOn: d.occurredOn,
+  issueTypes: storedIssues(d.issueTypes),
   anonymous: d.anonymous,
   personalExperience: d.personalExperience,
   version: d.version,
@@ -39,7 +41,12 @@ export async function saveDraft(
     if (existing?.mutationKey === mutationKey) {
       if (
         !Object.entries(content).every(
-          ([k, value]) => existing[k as keyof typeof content] === value,
+          ([k, value]) =>
+            JSON.stringify(
+              k === "issueTypes"
+                ? storedIssues(existing.issueTypes)
+                : existing[k as keyof typeof content],
+            ) === JSON.stringify(value),
         )
       )
         throw new HttpError(409, "保存标识已用于另一份内容，请重新读取草稿");
@@ -87,10 +94,19 @@ export async function submitDraft(
     if (draft.version !== version)
       throw new HttpError(409, "草稿版本已变化，请重新读取后确认内容");
     const checked = postSchema.parse(draft);
-    const { personalExperience: _declaration, ...content } = checked;
+    const subject = await tx.subject.findUniqueOrThrow({
+      where: { id: checked.subjectId },
+    });
+    checkIssueCategory(subject.category, checked.issueTypes);
+    const {
+      personalExperience: _declaration,
+      issueTypes,
+      ...content
+    } = checked;
     const post = await tx.post.create({
       data: {
         ...content,
+        issues: { create: issueTypes.map((code) => ({ code })) },
         authorId,
         submissionKey: `draft:${id}`,
         submissionDigest: postDigest(checked),

@@ -26,6 +26,7 @@ const draft = {
   occurredOn: "2026-01-01",
   anonymous: true,
   personalExperience: true,
+  issueTypes: ["TASTE"],
 };
 const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 beforeAll(async () => {

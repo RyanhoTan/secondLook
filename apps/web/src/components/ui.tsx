@@ -16,6 +16,7 @@ import {
   type PublicPost,
 } from "@secondlook/contracts";
 import { date } from "../lib/resource";
+import { IssueTypes } from "./IssueTypes";
 export function CategoryIcon({
   category,
   size = 20,
@@ -92,6 +93,7 @@ export function PostCard({
             </small>
           )}
         </Link>
+        {post.issueTypes.length > 0 && <IssueTypes value={post.issueTypes} />}
         <div className="post-bottom">
           <span className="author">
             <span className="avatar">

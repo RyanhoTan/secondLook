@@ -5,6 +5,7 @@ import { useResource } from "../lib/resource";
 import { Feedback, PageHeading } from "../components/ui";
 import { NeedLogin } from "./Account";
 import { MaterialReviews } from "../components/MaterialReviews";
+import { IssueTypes } from "../components/IssueTypes";
 export function Admin() {
   const { user } = useSession();
   return !user ? (
@@ -86,6 +87,7 @@ function ReviewItem({ item, onDone }: { item: Review; onDone: () => void }) {
           <h4>{item.previous.title}</h4>
           <p>{item.previous.occurredOn}发生</p>
           <p className="revision-text">{item.previous.body}</p>
+          <IssueTypes value={item.previous.issueTypes} />
         </details>
       )}
       {item.changeReason && (
@@ -95,6 +97,7 @@ function ReviewItem({ item, onDone }: { item: Review; onDone: () => void }) {
         <p className="small-note">修改后的发生日期：{item.occurredOn}</p>
       )}
       <p className="review-body">{item.body}</p>
+      {item.issueTypes && <IssueTypes value={item.issueTypes} />}
       <form onSubmit={submit}>
         <label>
           审核说明

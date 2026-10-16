@@ -37,6 +37,7 @@ const ready = () => ({
   body: "这是一条用于验证草稿恢复与投稿结果确认的虚构经历，不涉及真实对象。",
   occurredOn: "2026-01-01",
   personalExperience: true,
+  issueTypes: ["TASTE"],
 });
 const save = (id: string, data: object, token = author) =>
   request(app).put(`/api/v1/me/drafts/${id}`).set(auth(token)).send(data);

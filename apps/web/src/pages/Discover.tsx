@@ -5,6 +5,7 @@ import {
   postBrowseSchema,
   postBrowseParams,
   postSortLabels,
+  issueLabels,
   subjectBrowseParams,
   type Category,
   type Page,
@@ -22,16 +23,20 @@ function filterInputs(params: URLSearchParams) {
     occurredFrom: params.get("occurredFrom") ?? "",
     occurredTo: params.get("occurredTo") ?? "",
     sort: params.get("sort") ?? "PUBLISHED_DESC",
+    issue: params.get("issue") ?? "",
   };
 }
 export function Discover() {
   const [params, setParams] = useSearchParams();
   const [inputs, setInputs] = useState(() => filterInputs(params));
   const [error, setError] = useState("");
+  const { q, city, occurredFrom, occurredTo, sort, issue } =
+    filterInputs(params);
   useEffect(() => {
-    setInputs(filterInputs(params));
+    // Category/page navigation must not overwrite text entered after the click.
+    setInputs({ q, city, occurredFrom, occurredTo, sort, issue });
     setError("");
-  }, [params]);
+  }, [q, city, occurredFrom, occurredTo, sort, issue]);
   const active = postBrowseSchema.safeParse(Object.fromEntries(params));
   const page = active.success ? active.data.page : 1;
   const pageSize = active.success ? active.data.limit : 12;
@@ -46,6 +51,7 @@ export function Discover() {
       ...inputs,
       ...patch,
       category: (patch.category ?? category) || undefined,
+      issue: inputs.issue || undefined,
       page: 1,
     });
     if (!checked.success) {
@@ -100,8 +106,24 @@ export function Discover() {
           </button>
         </div>
         <details className="browse-filters">
-          <summary>时间与排序</summary>
+          <summary>更多筛选与排序</summary>
           <div className="browse-filter-fields">
+            <label>
+              问题类型筛选
+              <select
+                value={inputs.issue}
+                onChange={(e) =>
+                  setInputs({ ...inputs, issue: e.target.value })
+                }
+              >
+                <option value="">全部问题类型</option>
+                {Object.entries(issueLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label>
               发生日期从
               <input
@@ -143,7 +165,11 @@ export function Discover() {
             <button
               type="button"
               className="text-button"
-              onClick={() => setParams({})}
+              onClick={() => {
+                setInputs(filterInputs(new URLSearchParams()));
+                setError("");
+                setParams({});
+              }}
             >
               清除筛选
             </button>
@@ -181,6 +207,9 @@ export function Discover() {
           <span>{sortLabel}</span>
         </div>
         <p className="browse-sample small-note">
+          {active.success && active.data.issue
+            ? `问题类型：${issueLabels[active.data.issue]}。`
+            : ""}
           {active.success &&
             (active.data.occurredFrom || active.data.occurredTo) &&
             `发生日期：${active.data.occurredFrom ?? "不限"} 至 ${active.data.occurredTo ?? "不限"}。`}

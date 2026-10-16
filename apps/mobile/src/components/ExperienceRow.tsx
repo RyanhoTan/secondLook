@@ -7,6 +7,7 @@ import {
   type PublicPost,
 } from "@secondlook/contracts";
 import { useApp } from "../lib/context";
+import { IssueTypes } from "./IssueTypes";
 import { usePressFeedback } from "../lib/interaction";
 export function PostCard({ post }: { post: PublicPost }) {
   const { colors } = useApp();
@@ -114,6 +115,7 @@ export function PostCard({ post }: { post: PublicPost }) {
         >
           {post.body}
         </Text>
+        {post.issueTypes.length > 0 && <IssueTypes value={post.issueTypes} />}
         {post.correction && (
           <Text
             style={{

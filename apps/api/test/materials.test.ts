@@ -74,15 +74,19 @@ beforeEach(async () => {
   });
   authorId = user.id;
   author = await issueSession(db, user.id);
-  const post = await request(app).post("/api/v1/posts").set(auth(author)).send({
-    clientKey: randomUUID(),
-    subjectId,
-    title: "材料测试：完全虚构的亲历",
-    body: "这是用于图片材料权限、审核与脱敏测试的虚构内容，不涉及真实单位或个人。",
-    occurredOn: "2026-01-01",
-    anonymous: true,
-    personalExperience: true,
-  });
+  const post = await request(app)
+    .post("/api/v1/posts")
+    .set(auth(author))
+    .send({
+      clientKey: randomUUID(),
+      subjectId,
+      title: "材料测试：完全虚构的亲历",
+      body: "这是用于图片材料权限、审核与脱敏测试的虚构内容，不涉及真实单位或个人。",
+      occurredOn: "2026-01-01",
+      anonymous: true,
+      personalExperience: true,
+      issueTypes: ["INFORMATION"],
+    });
   postId = post.body.id;
   expect(
     (
@@ -498,6 +502,7 @@ describe("private originals, reviewed copies and upload recovery", () => {
         occurredOn: "2026-01-01",
         anonymous: true,
         personalExperience: true,
+        issueTypes: ["INFORMATION"],
       });
     postId = created.body.id;
     const item = (await upload()).body;

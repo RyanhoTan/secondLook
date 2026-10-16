@@ -3,6 +3,7 @@ import { historyVisibilitySchema, revisionSchema } from "@secondlook/contracts";
 import type { Database } from "../db.js";
 import { authenticate, requireAdmin } from "../auth.js";
 import { HttpError } from "../http.js";
+import { postIssues, storedIssues } from "../issues.js";
 import { hideHistoricalRevision, submitRevision } from "../revisions.js";
 
 export function revisionRoutes(db: Database) {
@@ -23,6 +24,8 @@ export function revisionRoutes(db: Database) {
           body: true,
           occurredOn: true,
           currentVersion: true,
+          issues: true,
+          subject: { select: { category: true } },
           revisions: {
             orderBy: [{ createdAt: "desc" }, { id: "desc" }],
             take: 1,
@@ -31,6 +34,7 @@ export function revisionRoutes(db: Database) {
               title: true,
               body: true,
               occurredOn: true,
+              issueTypes: true,
               changeReason: true,
               status: true,
               reviewReason: true,
@@ -39,8 +43,20 @@ export function revisionRoutes(db: Database) {
         },
       });
       if (!post) throw new HttpError(404, "找不到可修改的本人公开记录");
-      const { revisions, ...content } = post;
-      res.json({ post: content, latestRevision: revisions[0] ?? null });
+      const { revisions, issues, subject, ...content } = post;
+      res.json({
+        post: {
+          ...content,
+          issueTypes: postIssues(issues),
+          category: subject.category,
+        },
+        latestRevision: revisions[0]
+          ? {
+              ...revisions[0],
+              issueTypes: storedIssues(revisions[0].issueTypes),
+            }
+          : null,
+      });
     },
   );
   router.post(

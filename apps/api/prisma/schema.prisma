@@ -56,6 +56,7 @@ model Post {
   submissionKey String?
   submissionDigest String?
   revisions PostRevision[]
+  issues PostIssue[]
   updates ProgressUpdate[]
   follows Follow[]
   events TimelineEvent[]
@@ -65,7 +66,15 @@ model Post {
   @@index([subjectId,status])
   @@unique([authorId,submissionKey])
 }
+model PostIssue {
+  postId String
+  post Post @relation(fields:[postId],references:[id],onDelete:Cascade)
+  code String
+  @@id([postId,code])
+  @@index([code,postId])
+}
 model PostDraft {
+  issueTypes Json @default("[]")
   id String @id
   authorId String
   author User @relation(fields:[authorId],references:[id])
@@ -85,6 +94,7 @@ model PostDraft {
   @@index([authorId,updatedAt])
 }
 model PostRevision {
+  issueTypes Json @default("[]")
   id String @id @default(cuid())
   postId String
   post Post @relation(fields:[postId],references:[id])

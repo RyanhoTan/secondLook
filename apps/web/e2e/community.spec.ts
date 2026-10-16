@@ -191,6 +191,7 @@ test("publish, moderate, follow and track a subsequent update through the browse
       "这是一条用于浏览器测试的虚构经历，我们检查投稿、审核和后续通知是否可以完整走通。",
     );
   await page.getByLabel("确认这是我的亲身经历，并愿意补充后续。").check();
+  await page.getByRole("checkbox", { name: "口味体验", exact: true }).check();
   await page.getByRole("button", { name: "提交审核", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "感谢你，多留一份依据。" }),
@@ -296,6 +297,7 @@ test("review corrections without leaking pending text and retain safe version hi
       occurredOn: "2026-01-01",
       anonymous: true,
       personalExperience: true,
+      issueTypes: ["TASTE"],
       clientKey: randomUUID(),
     },
   });
@@ -432,6 +434,7 @@ test("upload and redact materials with private-only review and withdrawal", asyn
       occurredOn: "2026-01-01",
       anonymous: true,
       personalExperience: true,
+      issueTypes: ["TASTE"],
       clientKey: randomUUID(),
     },
   });
@@ -616,9 +619,11 @@ test("upload and redact materials with private-only review and withdrawal", asyn
       .filter({ hasText: "公开材料来源" })
       .getByRole("button", { name: "撤回此材料", exact: true })
       .click();
-    await expect(page.getByRole("status")).toHaveText(
-      "材料已撤回，原公开链接已失效。",
-    );
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "材料已撤回，原公开链接已失效。" }),
+    ).toBeVisible();
     expect(
       (
         await page.request.get(`/api/v1/materials/${publicList[0].id}/public`)
@@ -670,6 +675,7 @@ test("search past fifty objects and page personal and subject records without lo
           occurredOn: "2026-01-01",
           anonymous: true,
           personalExperience: true,
+          issueTypes: ["TASTE"],
           clientKey: randomUUID(),
         },
       })
@@ -768,6 +774,7 @@ test("reassess materials for corrected text while retaining historical approvals
         occurredOn: "2026-01-01",
         anonymous: true,
         personalExperience: true,
+        issueTypes: ["TASTE"],
         clientKey: randomUUID(),
       },
     })
@@ -914,6 +921,7 @@ test("retries uncertain submissions with the same content and identifier", async
       .getByLabel("说说你的亲身经历")
       .fill("这是一条用于网络失败重试验证的虚构经历，重试不能产生第二条投稿。");
     await page.getByLabel("确认这是我的亲身经历，并愿意补充后续。").check();
+    await page.getByRole("checkbox", { name: "口味体验", exact: true }).check();
     const requests: object[] = [];
     let firstId = "";
     await page.route("**/api/v1/me/drafts/*/submit", async (route) => {
@@ -1129,6 +1137,7 @@ test("reconciles a lost autosave response and restores a committed submission af
     .fill("这是一条用于验证重启后恢复投稿结果的虚构经历，所有文字仅用于测试。");
   await page.getByLabel("发生日期").fill("2026-01-01");
   await page.getByLabel("确认这是我的亲身经历，并愿意补充后续。").check();
+  await page.getByRole("checkbox", { name: "口味体验", exact: true }).check();
   await page.route("**/api/v1/me/drafts/*/submit", async (route) => {
     const result = await route.fetch();
     expect(result.status()).toBe(201);
@@ -1214,6 +1223,7 @@ test("shares date filters and sorting through URLs, pagination and browser histo
           title: `日期浏览虚构：${label}`,
           body: "这是日期浏览虚构测试，发生日期与发布时间不同；所有对象和经过均为虚构样本。",
           occurredOn: `2026-09-${day}`,
+          issueTypes: [index === 2 ? "WORK" : "TASTE"],
           anonymous: true,
           personalExperience: true,
         },
@@ -1241,7 +1251,7 @@ test("shares date filters and sorting through URLs, pagination and browser histo
   await expect(page.locator(".post-card")).toContainText("第二天");
   await page.reload();
   await expect(pager.getByRole("status")).toHaveText("第 2 / 3 页");
-  await page.getByText("时间与排序", { exact: true }).click();
+  await page.getByText("更多筛选与排序", { exact: true }).click();
   await expect(page.getByLabel("发生日期从", { exact: true })).toHaveValue(
     "2026-09-01",
   );
@@ -1294,7 +1304,7 @@ test("keeps expanded browse filters readable and rejects invalid shared dates", 
   await expect(page.locator(".experience-section .error")).toContainText(
     "请输入有效日期",
   );
-  await page.getByText("时间与排序", { exact: true }).click();
+  await page.getByText("更多筛选与排序", { exact: true }).click();
   await page.getByRole("button", { name: "清除筛选" }).click();
   await expect(page.locator(".post-card").first()).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
@@ -1362,11 +1372,9 @@ test("keeps expanded browse filters readable and rejects invalid shared dates", 
       expect((await action.boundingBox())?.height).toBeGreaterThanOrEqual(44);
       await action.click();
     }
-    await page
-      .locator(".browse-filters .form-actions")
-      .screenshot({
-        path: `test-results/browse-actions-${theme === "浅色模式" ? "light" : "dark"}.png`,
-      });
+    await page.locator(".browse-filters .form-actions").screenshot({
+      path: `test-results/browse-actions-${theme === "浅色模式" ? "light" : "dark"}.png`,
+    });
     await page.screenshot({
       path: `test-results/browse-filters-${theme === "浅色模式" ? "light" : "dark"}.png`,
       fullPage: true,

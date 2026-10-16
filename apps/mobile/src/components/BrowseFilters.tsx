@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { View } from "react-native";
 import { postSortLabels } from "@secondlook/contracts";
+import type { IssueType } from "@secondlook/contracts";
+import { IssuePicker } from "./IssueTypes";
 import { Button, Field } from "./ui";
 import { SegmentedControl } from "./SegmentedControl";
 
@@ -10,9 +12,19 @@ export function BrowseFilters({
   onApply,
   onClear,
 }: {
-  value: { occurredFrom: string; occurredTo: string; sort: string };
+  value: {
+    occurredFrom: string;
+    occurredTo: string;
+    sort: string;
+    issue: string;
+  };
   onChange: (
-    value: Partial<{ occurredFrom: string; occurredTo: string; sort: string }>,
+    value: Partial<{
+      occurredFrom: string;
+      occurredTo: string;
+      sort: string;
+      issue: string;
+    }>,
   ) => void;
   onApply: () => void;
   onClear: () => void;
@@ -21,10 +33,15 @@ export function BrowseFilters({
   return (
     <View style={{ gap: 12, marginTop: 16 }}>
       <Button secondary onPress={() => setOpen((v) => !v)}>
-        {open ? "收起时间筛选" : "时间与排序"}
+        {open ? "收起筛选" : "更多筛选与排序"}
       </Button>
       {open && (
         <View style={{ paddingTop: 12 }}>
+          <IssuePicker
+            filter
+            value={value.issue ? [value.issue as IssueType] : []}
+            onChange={(value) => onChange({ issue: value[0] ?? "" })}
+          />
           <Field
             label="发生日期从（YYYY-MM-DD）"
             placeholder="不限"

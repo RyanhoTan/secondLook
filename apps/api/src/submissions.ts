@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { PostSubmission } from "@secondlook/contracts";
 import type { Database } from "./db.js";
 import { HttpError } from "./http.js";
+import { checkIssueCategory } from "./issues.js";
 import type { z } from "zod";
 import type { postSchema } from "@secondlook/contracts";
 
@@ -14,6 +15,7 @@ export function postDigest(data: z.infer<typeof postSchema>) {
         data.body,
         data.occurredOn,
         data.anonymous,
+        [...data.issueTypes].sort(),
       ]),
     )
     .digest("hex");
@@ -22,10 +24,15 @@ export function postDigest(data: z.infer<typeof postSchema>) {
 export async function submitPost(
   db: Database,
   authorId: string,
-  { clientKey, personalExperience: _declaration, ...data }: PostSubmission,
+  {
+    clientKey,
+    personalExperience: _declaration,
+    issueTypes,
+    ...data
+  }: PostSubmission,
 ) {
   // Keep the initial request digest immutable when the published text is revised.
-  const digest = postDigest({ ...data, personalExperience: true });
+  const digest = postDigest({ ...data, issueTypes, personalExperience: true });
   const where = {
     authorId_submissionKey: { authorId, submissionKey: clientKey },
   };
@@ -42,11 +49,15 @@ export async function submitPost(
   if (existing) return replay(existing);
   try {
     return await db.$transaction(async (tx) => {
-      if (!(await tx.subject.findUnique({ where: { id: data.subjectId } })))
-        throw new HttpError(404, "请先选择有效对象");
+      const subject = await tx.subject.findUnique({
+        where: { id: data.subjectId },
+      });
+      if (!subject) throw new HttpError(404, "请先选择有效对象");
+      checkIssueCategory(subject.category, issueTypes);
       const post = await tx.post.create({
         data: {
           ...data,
+          issues: { create: issueTypes.map((code) => ({ code })) },
           authorId,
           submissionKey: clientKey,
           submissionDigest: digest,

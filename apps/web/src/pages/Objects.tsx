@@ -20,11 +20,13 @@ export function Objects() {
   const [city, setCity] = useState(params.get("city") ?? "");
   const [error, setError] = useState("");
   const [revision, refresh] = useState(0);
+  const queryParam = params.get("q") ?? "";
+  const cityParam = params.get("city") ?? "";
   useEffect(() => {
-    setQuery(params.get("q") ?? "");
-    setCity(params.get("city") ?? "");
+    setQuery(queryParam);
+    setCity(cityParam);
     setError("");
-  }, [params]);
+  }, [queryParam, cityParam]);
   const parsed = paginationSchema.safeParse(Object.fromEntries(params));
   const subjects = useResource<Page<Subject>>(`/subjects?${params}`, revision);
   const category = params.get("category") ?? "";
@@ -90,7 +92,12 @@ export function Objects() {
         <button
           className="text-button"
           type="button"
-          onClick={() => setParams({})}
+          onClick={() => {
+            setQuery("");
+            setCity("");
+            setError("");
+            setParams({});
+          }}
         >
           清除条件
         </button>

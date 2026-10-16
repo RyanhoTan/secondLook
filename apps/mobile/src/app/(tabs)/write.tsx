@@ -6,6 +6,7 @@ import { Switch, Text, View } from "react-native";
 import { categories, type Category, type Subject } from "@secondlook/contracts";
 import { useApp } from "../../lib/context";
 import { SubjectPicker } from "../../components/SubjectPicker";
+import { IssuePicker, IssueTypes } from "../../components/IssueTypes";
 import {
   Screen,
   Heading,
@@ -155,6 +156,7 @@ function Compose({ id, fresh }: { id: string; fresh: boolean }) {
           <Text style={{ color: colors.ink, fontSize: 16, lineHeight: 28 }}>
             {pending.body}
           </Text>
+          <IssueTypes value={pending.issueTypes} />
           <Message
             empty={
               busy
@@ -217,6 +219,12 @@ function Compose({ id, fresh }: { id: string; fresh: boolean }) {
       ) : (
         <>
           <SubjectPicker selected={selected} onChange={setSelected} />
+          <IssuePicker
+            category={selected?.category}
+            value={content.issueTypes}
+            onChange={(issueTypes) => edit({ issueTypes })}
+            disabled={busy}
+          />
           <Button secondary onPress={() => setCreating(true)}>
             找不到？添加新对象
           </Button>

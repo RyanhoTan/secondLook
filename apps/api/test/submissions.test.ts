@@ -29,6 +29,7 @@ const data = (): PostSubmission => ({
   occurredOn: "2026-01-01",
   anonymous: true,
   personalExperience: true,
+  issueTypes: ["TASTE"],
 });
 const send = (body: object, token = author) =>
   request(app).post("/api/v1/posts").set(auth(token)).send(body);
@@ -169,6 +170,7 @@ it("keeps the original digest across approval and correction without overwriting
       body: body.body + "这里是更正之后的内容。",
       occurredOn: body.occurredOn,
       baseVersion: 1,
+      issueTypes: ["TASTE"],
       changeReason: "这是一条虚构更正说明。",
     });
   expect((await decide("REVISION", revision.body.id)).status).toBe(204);

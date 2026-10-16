@@ -3,6 +3,7 @@ import type { revisionSchema } from "@secondlook/contracts";
 import type { Database } from "./db.js";
 import { HttpError } from "./http.js";
 import { scheduleMaterialReviews } from "./materials.js";
+import { checkIssueCategory, storedIssues, postIssues } from "./issues.js";
 
 export const revisionSelect = {
   id: true,
@@ -10,6 +11,7 @@ export const revisionSelect = {
   title: true,
   body: true,
   occurredOn: true,
+  issueTypes: true,
   changeReason: true,
   publishedAt: true,
   visible: true,
@@ -21,6 +23,7 @@ export function publicRevision(row: {
   title: string;
   body: string;
   occurredOn: string;
+  issueTypes: unknown;
   changeReason: string;
   publishedAt: Date | null;
   visible: boolean;
@@ -37,6 +40,7 @@ export function publicRevision(row: {
         title: row.title,
         body: row.body,
         occurredOn: row.occurredOn,
+        issueTypes: storedIssues(row.issueTypes),
         changeReason: row.changeReason,
       }
     : { ...base, visible: false as const };
@@ -65,10 +69,12 @@ export async function submitRevision(
   return db.$transaction(async (tx) => {
     const post = await tx.post.findFirst({
       where: { id: postId, status: "PUBLISHED" },
+      include: { subject: true, issues: true },
     });
     if (!post) throw new HttpError(404, "记录不存在或尚未公开");
     if (post.authorId !== authorId)
       throw new HttpError(403, "只能修改自己的经历");
+    checkIssueCategory(post.subject.category, data.issueTypes);
     if (post.currentVersion !== data.baseVersion)
       throw new HttpError(409, "公开版本已变化，请重新打开修改页面");
     if (await tx.postRevision.findUnique({ where: { pendingKey: postId } }))
@@ -76,9 +82,11 @@ export async function submitRevision(
     if (
       post.title === data.title &&
       post.body === data.body &&
-      post.occurredOn === data.occurredOn
+      post.occurredOn === data.occurredOn &&
+      JSON.stringify(postIssues(post.issues)) ===
+        JSON.stringify(data.issueTypes)
     )
-      throw new HttpError(400, "请先修改标题、正文或发生日期");
+      throw new HttpError(400, "请先修改标题、正文、发生日期或问题类型");
     return tx.postRevision.create({
       data: { ...data, postId, pendingKey: postId },
     });
@@ -135,6 +143,13 @@ export async function reviewRevision(
     });
     if (postChanged.count !== 1)
       throw new HttpError(409, "公开版本已变化，未发布本次修改");
+    await tx.postIssue.deleteMany({ where: { postId: revision.postId } });
+    await tx.postIssue.createMany({
+      data: storedIssues(revision.issueTypes).map((code) => ({
+        postId: revision.postId,
+        code,
+      })),
+    });
     await scheduleMaterialReviews(tx, revision.postId, version);
     const event = await tx.timelineEvent.create({
       data: {

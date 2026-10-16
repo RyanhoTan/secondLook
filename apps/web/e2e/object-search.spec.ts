@@ -38,6 +38,7 @@ test("finds empty objects and distinct branches with shareable filters and pagin
       occurredOn: "2026-01-01",
       anonymous: true,
       personalExperience: true,
+      issueTypes: ["TASTE"],
     },
   });
   expect(pending.status()).toBe(201);
@@ -86,6 +87,9 @@ test("finds empty objects and distinct branches with shareable filters and pagin
   await page.getByRole("button", { name: "清除条件", exact: true }).click();
   await expect(page.getByLabel("搜索对象名称或门店地址")).toHaveValue("");
   await expect(page.locator(".subject-row").first()).toBeVisible();
+  await page.getByLabel("搜索对象名称或门店地址").fill("尚未应用的输入");
+  await page.getByRole("button", { name: "清除条件", exact: true }).click();
+  await expect(page.getByLabel("搜索对象名称或门店地址")).toHaveValue("");
 });
 
 test("transfers common discovery filters and recovers an invalid or failed object lookup", async ({

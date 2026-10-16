@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { issueTypesSchema, issueTypeSchema, type IssueType } from "./issues";
+export * from "./issues";
 export const categories = {
   COMPANY: "公司",
   RESTAURANT: "饭店",
@@ -31,6 +33,10 @@ export const subjectSchema = z.object({
   address: z.string().trim().max(150).default(""),
 });
 export const postSchema = z.object({
+  issueTypes: issueTypesSchema.refine(
+    (v) => v.length > 0,
+    "请至少选择一个问题类型",
+  ),
   subjectId: z.string().min(1),
   title: z.string().trim().min(5).max(80),
   body: z.string().trim().min(20).max(5000),
@@ -50,6 +56,7 @@ export const updateSchema = z.object({
 export const postSubmissionSchema = postSchema.extend({ clientKey: z.uuid() });
 export type PostSubmission = z.infer<typeof postSubmissionSchema>;
 export const draftContentSchema = z.object({
+  issueTypes: issueTypesSchema.default([]),
   subjectId: z.string().min(1).nullable(),
   title: z.string().max(80),
   body: z.string().max(5000),
@@ -77,6 +84,7 @@ export const revisionSchema = postSchema
     title: true,
     body: true,
     occurredOn: true,
+    issueTypes: true,
   })
   .extend({
     baseVersion: z.number().int().min(1),
@@ -173,6 +181,7 @@ const optionalBrowseDate = z
 export const postBrowseSchema = paginationSchema
   .extend({
     subjectId: z.string().min(1).max(128).optional(),
+    issue: issueTypeSchema.optional(),
     occurredFrom: optionalBrowseDate,
     occurredTo: optionalBrowseDate,
     sort: z
@@ -196,6 +205,7 @@ export function postBrowseParams(value: PostBrowse) {
   if (value.city) params.set("city", value.city);
   if (value.category) params.set("category", value.category);
   if (value.subjectId) params.set("subjectId", value.subjectId);
+  if (value.issue) params.set("issue", value.issue);
   if (value.occurredFrom) params.set("occurredFrom", value.occurredFrom);
   if (value.occurredTo) params.set("occurredTo", value.occurredTo);
   if (value.sort !== "PUBLISHED_DESC") params.set("sort", value.sort);
@@ -212,6 +222,7 @@ export type Subject = {
   postCount: number;
 };
 export type PublicPost = {
+  issueTypes: IssueType[];
   id: string;
   title: string;
   body: string;
@@ -243,11 +254,13 @@ export type PublicRevision = {
       title: string;
       body: string;
       occurredOn: string;
+      issueTypes: IssueType[];
       changeReason: string;
     }
   | { visible: false }
 );
 export type OwnRevision = {
+  issueTypes: IssueType[];
   id: string;
   title: string;
   body: string;
@@ -259,8 +272,8 @@ export type OwnRevision = {
 export type RevisionEditor = {
   post: Pick<
     PublicPost,
-    "id" | "title" | "body" | "occurredOn" | "currentVersion"
-  >;
+    "id" | "title" | "body" | "occurredOn" | "currentVersion" | "issueTypes"
+  > & { category: Category };
   latestRevision: OwnRevision | null;
 };
 export type PostDetail = PublicPost & {
@@ -278,6 +291,7 @@ export type Notification = {
   createdAt: string;
 };
 export type Review = {
+  issueTypes?: IssueType[];
   id: string;
   title: string;
   body: string;
@@ -289,6 +303,7 @@ export type Review = {
     body: string;
     occurredOn: string;
     version: number;
+    issueTypes: IssueType[];
   };
   subjectName: string;
   createdAt: string;

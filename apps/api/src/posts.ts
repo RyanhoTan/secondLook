@@ -6,6 +6,7 @@ import type {
 } from "@secondlook/contracts";
 import type { Prisma } from "./generated/prisma/client.js";
 import { HttpError } from "./http.js";
+import { postIssues } from "./issues.js";
 const subjectCount = { posts: { where: { status: "PUBLISHED" } } } as const;
 export const subjectInclude = { _count: { select: subjectCount } };
 type SubjectRow = {
@@ -27,6 +28,7 @@ export function publicSubject(subject: SubjectRow) {
   };
 }
 export const postInclude = {
+  issues: true,
   author: { select: { nickname: true } },
   subject: { include: subjectInclude },
   revisions: {
@@ -37,6 +39,7 @@ export const postInclude = {
   },
 } as const;
 type PostRow = {
+  issues: { code: string }[];
   id: string;
   title: string;
   body: string;
@@ -61,6 +64,7 @@ export function publicPost(post: PostRow) {
     title: post.title,
     body: post.body,
     occurredOn: post.occurredOn,
+    issueTypes: postIssues(post.issues),
     createdAt: (post.publishedAt ?? post.createdAt).toISOString(),
     anonymous: post.anonymous,
     authorName: post.anonymous ? "匿名亲历者" : post.author.nickname,
@@ -96,9 +100,11 @@ export async function searchPosts(db: Database, query: PostBrowse) {
     sort,
     page,
     limit,
+    issue,
   } = query;
   const where: Prisma.PostWhereInput = {
     status: "PUBLISHED",
+    ...(issue ? { issues: { some: { code: issue } } } : {}),
     ...(subjectId ? { subjectId } : {}),
     ...(category || city
       ? {
@@ -184,7 +190,10 @@ export async function reviewItem(
     });
     if (action === "REJECT") return;
     if (kind === "POST") {
-      const post = await tx.post.findUniqueOrThrow({ where: { id } });
+      const post = await tx.post.findUniqueOrThrow({
+        where: { id },
+        include: { issues: true },
+      });
       await tx.postRevision.create({
         data: {
           postId: id,
@@ -193,6 +202,7 @@ export async function reviewItem(
           title: post.title,
           body: post.body,
           occurredOn: post.occurredOn,
+          issueTypes: postIssues(post.issues),
           changeReason: "首次公开",
           status: "PUBLISHED",
           publishedAt: post.publishedAt,

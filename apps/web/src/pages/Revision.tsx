@@ -5,6 +5,7 @@ import { useSession } from "../lib/session";
 import { useResource } from "../lib/resource";
 import { Feedback, PageHeading } from "../components/ui";
 import { NeedLogin } from "./Account";
+import { IssuePicker, IssueTypes } from "../components/IssueTypes";
 
 export function Revision() {
   const { user } = useSession();
@@ -26,6 +27,7 @@ function RevisionForm({ data }: { data: RevisionEditor }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [issueTypes, setIssueTypes] = useState(content.issueTypes);
   const pending = latest?.status === "PENDING";
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -33,6 +35,7 @@ function RevisionForm({ data }: { data: RevisionEditor }) {
     const form = new FormData(event.currentTarget);
     const result = revisionSchema.safeParse({
       title: form.get("title"),
+      issueTypes,
       body: form.get("body"),
       occurredOn: form.get("occurredOn"),
       changeReason: form.get("changeReason"),
@@ -72,6 +75,7 @@ function RevisionForm({ data }: { data: RevisionEditor }) {
           <h2>{latest.title}</h2>
           <p className="revision-text">{latest.body}</p>
           <p>发生日期：{latest.occurredOn}</p>
+          <IssueTypes value={latest.issueTypes} />
           <p>更正说明：{latest.changeReason}</p>
         </section>
       ) : (
@@ -124,6 +128,12 @@ function RevisionForm({ data }: { data: RevisionEditor }) {
               placeholder="哪些内容有变化？为什么需要修改？此说明会公开展示。"
             />
           </label>
+          <IssuePicker
+            category={data.post.category}
+            value={issueTypes}
+            onChange={setIssueTypes}
+            disabled={busy}
+          />
           {error && (
             <p className="error" role="alert">
               {error}

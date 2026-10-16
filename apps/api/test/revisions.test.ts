@@ -35,6 +35,7 @@ const original = {
   occurredOn: "2026-01-01",
   anonymous: true,
   personalExperience: true,
+  issueTypes: ["INFORMATION"],
 };
 const correction = {
   title: "测试更正：重新核对后的经历记录",
@@ -42,6 +43,7 @@ const correction = {
   occurredOn: "2026-01-02",
   changeReason: "核对记录后修正发生时间与经过。",
   baseVersion: 1,
+  issueTypes: ["INFORMATION"],
 };
 beforeAll(async () => {
   execFileSync(

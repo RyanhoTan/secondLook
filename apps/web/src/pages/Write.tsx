@@ -6,6 +6,7 @@ import { categories, type Subject, type Category } from "@secondlook/contracts";
 import { newClientKey } from "../lib/client-key";
 import { useSession } from "../lib/session";
 import { SubjectPicker } from "../components/SubjectPicker";
+import { IssuePicker, IssueTypes } from "../components/IssueTypes";
 import { NeedLogin } from "./Account";
 import { Feedback, PageHeading } from "../components/ui";
 export function Write() {
@@ -151,6 +152,7 @@ function WriteForm({ id, fresh }: { id: string; fresh: boolean }) {
             {pending.anonymous ? "匿名亲历者" : "使用昵称"}
           </p>
           <p className="revision-text">{pending.body}</p>
+          <IssueTypes value={pending.issueTypes} />
           <button
             type="button"
             className="button primary"
@@ -212,6 +214,11 @@ function WriteForm({ id, fresh }: { id: string; fresh: boolean }) {
           >
             <fieldset disabled={busy} className="compose-fields">
               <SubjectPicker selected={selected} onChange={setSelected} />
+              <IssuePicker
+                category={selected?.category}
+                value={content.issueTypes}
+                onChange={(issueTypes) => edit({ issueTypes })}
+              />
               <button
                 type="button"
                 className="text-button add-subject"

@@ -10,6 +10,7 @@ import type {
 import { useResource, date } from "../lib/resource";
 import { useSession } from "../lib/session";
 import { EvidenceTag, Feedback, PageHeading, PostCard } from "../components/ui";
+import { IssueTypes } from "../components/IssueTypes";
 import { RevisionHistory } from "../components/RevisionHistory";
 import { PublicMaterials } from "../components/Materials";
 import { Pagination } from "../components/Pagination";
@@ -57,6 +58,7 @@ export function Detail() {
           <span>{data.subject.city}</span>
         </div>
         <EvidenceTag post={data} />
+        <IssueTypes value={data.issueTypes} />
       </header>
       {data.correction && (
         <aside className="correction-note" aria-label="重要更正">

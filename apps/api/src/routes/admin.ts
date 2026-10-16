@@ -5,6 +5,7 @@ import { authenticate, requireAdmin } from "../auth.js";
 import { HttpError } from "../http.js";
 import { reviewItem } from "../posts.js";
 import { reviewRevision } from "../revisions.js";
+import { postIssues, storedIssues } from "../issues.js";
 export function adminRoutes(db: Database) {
   const router = Router();
   router.use("/admin", authenticate(db, true), requireAdmin);
@@ -12,19 +13,19 @@ export function adminRoutes(db: Database) {
     const [posts, updates, revisions] = await db.$transaction([
       db.post.findMany({
         where: { status: "PENDING" },
-        include: { subject: true },
+        include: { subject: true, issues: true },
         orderBy: { createdAt: "asc" },
         take: 100,
       }),
       db.progressUpdate.findMany({
         where: { status: "PENDING", post: { status: "PUBLISHED" } },
-        include: { post: { include: { subject: true } } },
+        include: { post: { include: { subject: true, issues: true } } },
         orderBy: { createdAt: "asc" },
         take: 100,
       }),
       db.postRevision.findMany({
         where: { status: "PENDING", post: { status: "PUBLISHED" } },
-        include: { post: { include: { subject: true } } },
+        include: { post: { include: { subject: true, issues: true } } },
         orderBy: { createdAt: "asc" },
         take: 100,
       }),
@@ -35,6 +36,7 @@ export function adminRoutes(db: Database) {
         title: p.title,
         body: p.body,
         kind: "POST",
+        issueTypes: postIssues(p.issues),
         subjectName: p.subject.name,
         createdAt: p.createdAt.toISOString(),
       })),
@@ -51,6 +53,7 @@ export function adminRoutes(db: Database) {
         title: r.title,
         body: r.body,
         kind: "REVISION",
+        issueTypes: storedIssues(r.issueTypes),
         changeReason: r.changeReason,
         occurredOn: r.occurredOn,
         subjectName: r.post.subject.name,
@@ -60,6 +63,7 @@ export function adminRoutes(db: Database) {
           body: r.post.body,
           occurredOn: r.post.occurredOn,
           version: r.post.currentVersion,
+          issueTypes: postIssues(r.post.issues),
         },
       })),
     ]);

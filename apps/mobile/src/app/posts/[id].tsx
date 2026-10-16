@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import type { PostDetail } from "@secondlook/contracts";
 import { useApp } from "../../lib/context";
+import { IssueTypes } from "../../components/IssueTypes";
 import { useResource } from "../../lib/resource";
 import { RevisionHistory } from "../../components/RevisionHistory";
 import { PublicMaterials } from "../../components/Materials";
@@ -61,6 +62,7 @@ export default function Detail() {
         description={`${post.authorName} · ${post.occurredOn} 发生 · ${post.subject.city}`}
       />
       <EvidenceTags post={post} />
+      <IssueTypes value={post.issueTypes} />
       {post.correction && (
         <View
           style={{

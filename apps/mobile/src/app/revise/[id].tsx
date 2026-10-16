@@ -4,6 +4,7 @@ import { Text, View } from "react-native";
 import { revisionSchema, type RevisionEditor } from "@secondlook/contracts";
 import { useApp } from "../../lib/context";
 import { useResource } from "../../lib/resource";
+import { IssuePicker, IssueTypes } from "../../components/IssueTypes";
 import {
   Screen,
   Heading,
@@ -38,6 +39,7 @@ function Form({ data }: { data: RevisionEditor }) {
   const [title, setTitle] = useState(content.title);
   const [body, setBody] = useState(content.body);
   const [occurredOn, setOccurredOn] = useState(content.occurredOn);
+  const [issueTypes, setIssueTypes] = useState(content.issueTypes);
   const [changeReason, setChangeReason] = useState(
     latest?.status === "REJECTED" ? latest.changeReason : "",
   );
@@ -51,6 +53,7 @@ function Form({ data }: { data: RevisionEditor }) {
       title,
       body,
       occurredOn,
+      issueTypes,
       changeReason,
       baseVersion: data.post.currentVersion,
     });
@@ -91,6 +94,7 @@ function Form({ data }: { data: RevisionEditor }) {
           <Text style={{ color: colors.ink, fontSize: 15, lineHeight: 27 }}>
             {latest.body}
           </Text>
+          <IssueTypes value={latest.issueTypes} />
           <Text style={{ color: colors.muted, fontSize: 15 }}>
             发生日期：{latest.occurredOn}
           </Text>
@@ -130,6 +134,12 @@ function Form({ data }: { data: RevisionEditor }) {
             onChangeText={setChangeReason}
             multiline
             maxLength={500}
+          />
+          <IssuePicker
+            category={data.post.category}
+            value={issueTypes}
+            onChange={setIssueTypes}
+            disabled={busy}
           />
           {error && <Message error={error} />}
           <Button disabled={busy} onPress={() => void submit()}>

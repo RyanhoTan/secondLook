@@ -3,6 +3,7 @@ import type { PublicRevision } from "@secondlook/contracts";
 import { useSession } from "../lib/session";
 import { date } from "../lib/resource";
 import { PublicMaterials } from "./Materials";
+import { IssueTypes } from "./IssueTypes";
 
 export function RevisionHistory({
   history,
@@ -42,6 +43,7 @@ export function RevisionHistory({
                 <h4>{item.title}</h4>
                 <p className="small-note">{item.occurredOn}发生</p>
                 <p className="revision-text">{item.body}</p>
+                <IssueTypes value={item.issueTypes} />
                 {expanded[item.id] && item.version !== currentVersion && (
                   <PublicMaterials postId={postId} version={item.version} />
                 )}

@@ -7,6 +7,7 @@ import {
   postBrowseSchema,
   postBrowseParams,
   postSortLabels,
+  issueLabels,
   type PostBrowse,
   type Category,
   type Page,
@@ -32,6 +33,7 @@ export default function Discover() {
     occurredFrom: "",
     occurredTo: "",
     sort: "PUBLISHED_DESC",
+    issue: "",
   };
   const [inputs, setInputs] = useState(blank);
   const [active, setActive] = useState<PostBrowse>(() =>
@@ -46,6 +48,7 @@ export default function Discover() {
       ...active,
       ...inputs,
       category: category || undefined,
+      issue: inputs.issue || undefined,
       page: 1,
     });
     if (!checked.success) {
@@ -206,6 +209,7 @@ export default function Discover() {
           marginBottom: 16,
         }}
       >
+        {active.issue ? `问题类型：${issueLabels[active.issue]}。` : ""}
         {active.occurredFrom || active.occurredTo
           ? `发生日期：${active.occurredFrom ?? "不限"} 至 ${active.occurredTo ?? "不限"}。`
           : ""}
