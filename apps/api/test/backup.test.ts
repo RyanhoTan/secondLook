@@ -136,6 +136,13 @@ beforeAll(async () => {
         .send()
     ).status,
   ).toBe(204);
+  expect(
+    (
+      await request(app)
+        .put(`/api/v1/subjects/${subject.id}/follow`)
+        .set(auth(reader))
+    ).status,
+  ).toBe(204);
   const revision = await request(app)
     .post(`/api/v1/posts/${postId}/revisions`)
     .set(auth(token))
@@ -200,6 +207,14 @@ it("restores accounts, sessions, public versions, drafts, notifications and mate
       ).body,
     ).toEqual(expected);
     expect(JSON.stringify(expected)).not.toContain(authorId);
+    const subjectId = (expected as { subject: { id: string } }).subject.id;
+    expect(
+      (
+        await request(restoredApp)
+          .get(`/api/v1/subjects/${subjectId}`)
+          .set(auth(reader))
+      ).body.following,
+    ).toBe(true);
     const login = await request(restoredApp).post("/api/v1/auth/login").send({
       username: "backup_author",
       password: "test-only-backup-password",

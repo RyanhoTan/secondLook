@@ -230,6 +230,7 @@ export type Subject = {
   address: string;
   postCount: number;
 };
+export type SubjectDetail = Subject & { following: boolean };
 export type PublicPost = {
   issueTypes: IssueType[];
   id: string;
@@ -305,6 +306,7 @@ export type PostDetail = PublicPost & {
 export type Page<T> = { items: T[]; total: number; page: number };
 export type Account = { id: string; nickname: string; role: "USER" | "ADMIN" };
 export type Notification = {
+  subjectName: string;
   id: string;
   title: string;
   body: string;

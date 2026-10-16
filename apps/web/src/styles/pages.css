@@ -1,6 +1,7 @@
 .page-heading {
   padding: 42px 0 32px;
   max-width: 760px;
+  overflow-wrap: anywhere;
 }
 .page-heading h1 {
   font-size: 2.5rem;

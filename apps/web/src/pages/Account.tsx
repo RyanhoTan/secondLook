@@ -120,7 +120,7 @@ function NotificationList() {
       <PageHeading
         eyebrow="持续关注，不错过变化"
         title="后续追踪"
-        description="你关注的经历有重要进展时，会在这里告诉你。"
+        description="你关注的帖子或对象有新公开经历和重要进展时，会在这里告诉你。"
       />
       {error && (
         <p className="error" role="alert">
@@ -137,6 +137,7 @@ function NotificationList() {
                 {date(n.createdAt)} {!n.read && "· 未读"}
               </small>
               <Link to={`/posts/${n.postId}`}>
+                <p className="small-note">{n.subjectName}</p>
                 <h3>{n.title}</h3>
                 <p>{n.body}</p>
               </Link>
@@ -154,7 +155,7 @@ function NotificationList() {
           ))}
         </div>
       ) : (
-        <Feedback empty="还没有新的进展。先关注一条经历，后续变化会出现在这里。" />
+        <Feedback empty="还没有新的进展。先关注一条经历或一个对象，后续变化会出现在这里。" />
       )}
     </>
   );

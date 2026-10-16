@@ -1,3 +1,4 @@
+import { notifyFollowers } from "./notifications.js";
 import {
   type Category,
   type EvidenceLevel,
@@ -218,7 +219,7 @@ export async function reviewItem(
           publishedAt: post.publishedAt,
         },
       });
-      await tx.timelineEvent.create({
+      const event = await tx.timelineEvent.create({
         data: {
           postId: id,
           title: "亲历记录公开",
@@ -226,6 +227,7 @@ export async function reviewItem(
           kind: "PUBLISHED",
         },
       });
+      await notifyFollowers(tx, id, event.id);
     } else {
       const update = await tx.progressUpdate.findUniqueOrThrow({
         where: { id },
@@ -238,13 +240,7 @@ export async function reviewItem(
           kind: "AUTHOR_UPDATE",
         },
       });
-      const followers = await tx.follow.findMany({
-        where: { postId: update.postId },
-      });
-      if (followers.length)
-        await tx.notification.createMany({
-          data: followers.map((f) => ({ userId: f.userId, eventId: event.id })),
-        });
+      await notifyFollowers(tx, update.postId, event.id);
     }
   });
 }

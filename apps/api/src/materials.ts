@@ -1,3 +1,4 @@
+import { notifyFollowers } from "./notifications.js";
 import type { z } from "zod";
 import type {
   materialSchema,
@@ -278,16 +279,7 @@ export async function reviewMaterial(
               kind: "MATERIAL_APPROVED",
             },
           });
-          const follows = await tx.follow.findMany({
-            where: { postId: item.postId },
-          });
-          if (follows.length)
-            await tx.notification.createMany({
-              data: follows.map((f) => ({
-                userId: f.userId,
-                eventId: event.id,
-              })),
-            });
+          await notifyFollowers(tx, item.postId, event.id);
         }
       }
     });
@@ -335,13 +327,7 @@ export async function withdrawMaterial(
           kind: "MATERIAL_WITHDRAWAL",
         },
       });
-      const follows = await tx.follow.findMany({
-        where: { postId: item.postId },
-      });
-      if (follows.length)
-        await tx.notification.createMany({
-          data: follows.map((f) => ({ userId: f.userId, eventId: event.id })),
-        });
+      await notifyFollowers(tx, item.postId, event.id);
     }
   });
 }

@@ -1,3 +1,4 @@
+import { notifyFollowers } from "./notifications.js";
 import {
   type revisionSchema,
   occurrenceBounds,
@@ -173,13 +174,7 @@ export async function reviewRevision(
         body: revision.changeReason,
       },
     });
-    const followers = await tx.follow.findMany({
-      where: { postId: revision.postId },
-    });
-    if (followers.length)
-      await tx.notification.createMany({
-        data: followers.map((f) => ({ userId: f.userId, eventId: event.id })),
-      });
+    await notifyFollowers(tx, revision.postId, event.id);
   });
 }
 

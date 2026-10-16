@@ -3,7 +3,7 @@ import {
   type PostDetail,
   type Page,
   type PublicPost,
-  type Subject,
+  type SubjectDetail,
 } from "@secondlook/contracts";
 import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router";
@@ -140,7 +140,34 @@ export function SubjectPage() {
 }
 function SubjectContent({ id }: { id: string }) {
   const [page, setPage] = useState(1);
-  const subject = useResource<Subject>(`/subjects/${id}`);
+  const { user, api } = useSession();
+  const [version, refresh] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const subject = useResource<SubjectDetail>(`/subjects/${id}`, version);
+  async function follow() {
+    if (!subject.data || busy) return;
+    const following = subject.data.following;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await api(`/subjects/${id}/follow`, {
+        method: following ? "DELETE" : "PUT",
+      });
+      setMessage(
+        following
+          ? "已取消对象关注。若仍关注其中的帖子，将继续收到该帖更新。"
+          : "已关注此对象，新公开经历和重要进展会出现在站内通知。",
+      );
+      refresh((v) => v + 1);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   const posts = useResource<Page<PublicPost>>(
     `/posts?subjectId=${id}&page=${page}`,
   );
@@ -157,6 +184,36 @@ function SubjectContent({ id }: { id: string }) {
         title={subject.data.name}
         description={`${subject.data.postCount} 条公开经历，数量不代表整体质量。`}
       />
+      <div className="detail-follow">
+        <p>关注这个具体对象的新公开经历与重要进展，不会订阅同名的其他门店。</p>
+        {user ? (
+          <button
+            className={`button ${subject.data.following ? "secondary" : "primary"}`}
+            disabled={busy}
+            onClick={() => void follow()}
+          >
+            {busy
+              ? "处理中…"
+              : subject.data.following
+                ? "已关注对象 · 点击取消"
+                : "关注此对象"}
+          </button>
+        ) : (
+          <Link className="button primary" to="/login">
+            登录并关注对象
+          </Link>
+        )}
+      </div>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      {message && (
+        <p className="small-note" role="status">
+          {message}
+        </p>
+      )}
       <div className="narrow-feed">
         {posts.error || posts.loading ? (
           <Feedback error={posts.error} loading={posts.loading} />

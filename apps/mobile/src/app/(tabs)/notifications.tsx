@@ -33,7 +33,7 @@ function List() {
       <Heading
         eyebrow="持续关注，不错过变化"
         title="后续追踪"
-        description="你关注的经历有重要进展时，会在这里告诉你。"
+        description="你关注的帖子或对象有新公开经历和重要进展时，会在这里告诉你。"
       />
       {error && <Message error={error} />}
       <Button secondary onPress={() => setVersion((v) => v + 1)}>
@@ -56,6 +56,9 @@ function List() {
             <Text style={{ fontSize: 12, color: colors.muted }}>
               {new Date(n.createdAt).toLocaleDateString("zh-CN")}{" "}
               {!n.read && "· 未读"}
+            </Text>
+            <Text style={{ fontSize: 14, color: colors.muted }}>
+              {n.subjectName}
             </Text>
             <Pressable
               accessibilityRole="button"
@@ -85,7 +88,7 @@ function List() {
           </View>
         ))
       ) : (
-        <Message empty="还没有新进展。先关注一条经历，看看故事的后续。" />
+        <Message empty="还没有新进展。先关注一条经历或一个对象，看看故事的后续。" />
       )}
     </Screen>
   );

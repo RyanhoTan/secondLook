@@ -48,14 +48,51 @@ export function communityRoutes(db: Database) {
     ]);
     res.json({ items: items.map(publicSubject), total, page });
   });
-  router.get("/subjects/:id", async (req, res) => {
-    const subject = await db.subject.findUnique({
-      where: { id: String(req.params.id) },
-      include: subjectInclude,
+  router.get("/subjects/:id", authenticate(db), async (req, res) => {
+    const payload = await db.$transaction(async (tx) => {
+      const id = String(req.params.id);
+      const subject = await tx.subject.findUnique({
+        where: { id },
+        include: subjectInclude,
+      });
+      if (!subject) throw new HttpError(404, "对象不存在");
+      const following = res.locals.user
+        ? await tx.subjectFollow.findUnique({
+            where: {
+              userId_subjectId: { userId: res.locals.user.id, subjectId: id },
+            },
+          })
+        : null;
+      return { ...publicSubject(subject), following: !!following };
     });
-    if (!subject) throw new HttpError(404, "对象不存在");
-    res.json(publicSubject(subject));
+    res.json(payload);
   });
+  router.put(
+    "/subjects/:id/follow",
+    authenticate(db, true),
+    async (req, res) => {
+      const subjectId = String(req.params.id),
+        userId = res.locals.user.id;
+      if (!(await db.subject.findUnique({ where: { id: subjectId } })))
+        throw new HttpError(404, "对象不存在");
+      await db.subjectFollow.upsert({
+        where: { userId_subjectId: { userId, subjectId } },
+        create: { userId, subjectId },
+        update: {},
+      });
+      res.status(204).end();
+    },
+  );
+  router.delete(
+    "/subjects/:id/follow",
+    authenticate(db, true),
+    async (req, res) => {
+      await db.subjectFollow.deleteMany({
+        where: { userId: res.locals.user.id, subjectId: String(req.params.id) },
+      });
+      res.status(204).end();
+    },
+  );
   router.post("/subjects", authenticate(db, true), async (req, res) => {
     const data = subjectSchema.parse(req.body);
     const existing = await db.subject.findFirst({ where: data });
@@ -178,7 +215,12 @@ export function communityRoutes(db: Database) {
         event: { post: { status: "PUBLISHED" } },
       },
       include: {
-        event: { include: { revision: { select: { visible: true } } } },
+        event: {
+          include: {
+            revision: { select: { visible: true } },
+            post: { select: { subject: { select: { name: true } } } },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
       take: 100,
@@ -188,6 +230,7 @@ export function communityRoutes(db: Database) {
         id: n.id,
         ...publicEventText(n.event),
         postId: n.event.postId,
+        subjectName: n.event.post.subject.name,
         read: n.read,
         createdAt: n.createdAt.toISOString(),
       })),
