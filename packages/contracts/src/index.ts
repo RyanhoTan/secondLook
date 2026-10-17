@@ -251,6 +251,28 @@ export function privatePageParams(value: PrivatePagination) {
 export const followingQuerySchema = privatePaginationSchema.extend({
   target: z.enum(["POST", "SUBJECT"]).default("POST"),
 });
+export const reviewKinds = {
+  ALL: "全部文字",
+  POST: "新亲历",
+  UPDATE: "后续更新",
+  REVISION: "原文修订",
+} as const;
+export const reviewQueueSchema = privatePaginationSchema.extend({
+  kind: z.enum(["ALL", "POST", "UPDATE", "REVISION"]).default("ALL"),
+  q: z.string().trim().max(100).default(""),
+});
+export type ReviewQueueQuery = z.infer<typeof reviewQueueSchema>;
+export function reviewQueueParams(value: ReviewQueueQuery) {
+  return new URLSearchParams({
+    kind: value.kind,
+    q: value.q,
+    page: String(value.page),
+    limit: String(value.limit),
+  });
+}
+export type ReviewQueuePage = Page<Review> & {
+  counts: Record<keyof typeof reviewKinds, number>;
+};
 export type FollowingQuery = z.infer<typeof followingQuerySchema>;
 export function followingParams(value: FollowingQuery) {
   return new URLSearchParams({

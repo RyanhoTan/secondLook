@@ -1,73 +1,44 @@
 import { Router } from "express";
-import { decisionSchema, publicOccurrence } from "@secondlook/contracts";
+import { decisionSchema, reviewQueueSchema } from "@secondlook/contracts";
 import type { Database } from "../db.js";
 import { authenticate, requireAdmin } from "../auth.js";
 import { HttpError } from "../http.js";
 import { reviewItem } from "../posts.js";
 import { reviewRevision } from "../revisions.js";
-import { postIssues, storedIssues } from "../issues.js";
+import {
+  reviewDtos,
+  reviewPostInclude,
+  reviewLinkedInclude,
+  reviewQueue,
+} from "../review-queue.js";
 export function adminRoutes(db: Database) {
   const router = Router();
   router.use("/admin", authenticate(db, true), requireAdmin);
+  router.get("/admin/review-queue", async (req, res) => {
+    res.json(await reviewQueue(db, reviewQueueSchema.parse(req.query)));
+  });
   router.get("/admin/reviews", async (_req, res) => {
     const [posts, updates, revisions] = await db.$transaction([
       db.post.findMany({
         where: { status: "PENDING" },
-        include: { subject: true, issues: true },
-        orderBy: { createdAt: "asc" },
+        include: reviewPostInclude,
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         take: 100,
       }),
       db.progressUpdate.findMany({
         where: { status: "PENDING", post: { status: "PUBLISHED" } },
-        include: { post: { include: { subject: true, issues: true } } },
-        orderBy: { createdAt: "asc" },
+        include: reviewLinkedInclude,
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         take: 100,
       }),
       db.postRevision.findMany({
         where: { status: "PENDING", post: { status: "PUBLISHED" } },
-        include: { post: { include: { subject: true, issues: true } } },
-        orderBy: { createdAt: "asc" },
+        include: reviewLinkedInclude,
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         take: 100,
       }),
     ]);
-    res.json([
-      ...posts.map((p) => ({
-        id: p.id,
-        title: p.title,
-        body: p.body,
-        kind: "POST",
-        ...publicOccurrence(p),
-        issueTypes: postIssues(p.issues),
-        subjectName: p.subject.name,
-        createdAt: p.createdAt.toISOString(),
-      })),
-      ...updates.map((u) => ({
-        id: u.id,
-        title: u.title,
-        body: u.body,
-        kind: "UPDATE",
-        subjectName: u.post.subject.name,
-        createdAt: u.createdAt.toISOString(),
-      })),
-      ...revisions.map((r) => ({
-        id: r.id,
-        title: r.title,
-        body: r.body,
-        kind: "REVISION",
-        issueTypes: storedIssues(r.issueTypes),
-        changeReason: r.changeReason,
-        ...publicOccurrence(r),
-        subjectName: r.post.subject.name,
-        createdAt: r.createdAt.toISOString(),
-        previous: {
-          title: r.post.title,
-          body: r.post.body,
-          ...publicOccurrence(r.post),
-          version: r.post.currentVersion,
-          issueTypes: postIssues(r.post.issues),
-        },
-      })),
-    ]);
+    res.json(reviewDtos(posts, updates, revisions));
   });
   router.post("/admin/reviews/:kind/:id/decision", async (req, res) => {
     const { action, reason } = decisionSchema.parse(req.body);
