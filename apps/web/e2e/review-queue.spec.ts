@@ -43,7 +43,9 @@ async function fixture(page: Page) {
     page.getByRole("heading", { name: "发现经历", exact: true }),
   ).toBeVisible();
   await page.getByRole("link", { name: "内容审核" }).click();
-  await expect(page.locator(".review-search")).toBeVisible();
+  await expect(
+    page.locator(".review-search:not(.material-search)"),
+  ).toBeVisible();
   await page.getByLabel("搜索待审标题、正文或对象").fill(prefix);
   await page.getByRole("button", { name: "查找待审内容" }).click();
   const queue = page.getByRole("region", { name: "文字审核队列" });
@@ -114,7 +116,7 @@ test("searches and pages the oldest text reviews, returning from an emptied last
       await page.getByRole("button", { name: /^外观：/ }).click();
       await page.getByRole("button", { name: label, exact: true }).click();
       await page
-        .locator(".review-search")
+        .locator(".review-search:not(.material-search)")
         .screenshot({ path: `test-results/review-search-${label}.png` });
     }
     await page.setViewportSize({ width: 390, height: 844 });
@@ -134,10 +136,10 @@ test("searches and pages the oldest text reviews, returning from an emptied last
     ).toBe(true);
     await page.setViewportSize({ width: 390, height: 1200 });
     await page
-      .locator(".review-search")
+      .locator(".review-search:not(.material-search)")
       .evaluate((el) => el.scrollIntoView({ block: "center" }));
     await page
-      .locator(".review-search")
+      .locator(".review-search:not(.material-search)")
       .screenshot({ path: "test-results/review-search-enlarged.png" });
     await page.getByRole("button", { name: "清除筛选", exact: true }).click();
     await expect(page.getByLabel("搜索待审标题、正文或对象")).toHaveValue("");
@@ -193,7 +195,7 @@ test("retries queue failures and ignores stale review navigation after changing 
     ).toBeVisible();
     const refresh = page.waitForResponse(
       (response) =>
-        response.url().includes("/api/v1/admin/materials") &&
+        response.url().includes("/api/v1/admin/material-queue") &&
         response.request().method() === "GET",
     );
     release();

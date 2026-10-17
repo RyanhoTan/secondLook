@@ -19,6 +19,14 @@ import { IssueTypes } from "../components/IssueTypes";
 export function Admin() {
   const { user } = useSession();
   const [params, setParams] = useSearchParams();
+  function navigate(value?: ReviewQueueQuery) {
+    setParams((previous) => {
+      const next = new URLSearchParams(previous);
+      for (const key of ["kind", "q", "page", "limit"]) next.delete(key);
+      if (value) reviewQueueParams(value).forEach((v, key) => next.set(key, v));
+      return next;
+    });
+  }
   const parsed = reviewQueueSchema.safeParse(
     Object.fromEntries(
       ["kind", "q", "page", "limit"].map((key) => {
@@ -34,18 +42,12 @@ export function Admin() {
       <>
         <PageHeading eyebrow="管理后台" title="待审队列" />
         <Feedback error="审核筛选条件无效，请清除后重试。" />
-        <button className="button secondary" onClick={() => setParams({})}>
+        <button className="button secondary" onClick={() => navigate()}>
           清除无效条件
         </button>
       </>
     );
-  return (
-    <ReviewQueue
-      key={user.id}
-      query={parsed.data}
-      navigate={(value) => setParams(reviewQueueParams(value))}
-    />
-  );
+  return <ReviewQueue key={user.id} query={parsed.data} navigate={navigate} />;
 }
 function ReviewQueue({
   query,

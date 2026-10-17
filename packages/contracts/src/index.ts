@@ -273,6 +273,21 @@ export function reviewQueueParams(value: ReviewQueueQuery) {
 export type ReviewQueuePage = Page<Review> & {
   counts: Record<keyof typeof reviewKinds, number>;
 };
+export const materialQueueSchema = privatePaginationSchema.extend({
+  q: z.string().trim().max(100).default(""),
+  status: z.enum(["ALL", "PENDING", "NEEDS_REVIEW"]).default("ALL"),
+  visibility: z.enum(["ALL", "PUBLIC", "REVIEW_ONLY"]).default("ALL"),
+});
+export type MaterialQueueQuery = z.infer<typeof materialQueueSchema>;
+export function materialQueueParams(value: MaterialQueueQuery) {
+  return new URLSearchParams({
+    q: value.q,
+    status: value.status,
+    visibility: value.visibility,
+    page: String(value.page),
+    limit: String(value.limit),
+  });
+}
 export type FollowingQuery = z.infer<typeof followingQuerySchema>;
 export function followingParams(value: FollowingQuery) {
   return new URLSearchParams({

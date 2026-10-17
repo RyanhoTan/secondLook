@@ -1,6 +1,5 @@
 import {
-  publicOccurrence,
-  formatOccurrence,
+  materialQueueSchema,
   materialLimits,
   materialReviewSchema,
   materialSchema,
@@ -13,6 +12,11 @@ import type { Database } from "../db.js";
 import { authenticate, requireAdmin } from "../auth.js";
 import { HttpError } from "../http.js";
 import { MaterialFiles } from "../material-files.js";
+import {
+  materialQueue,
+  materialReviewDto,
+  materialReviewInclude,
+} from "../material-queue.js";
 import {
   ownMaterial,
   publicMaterial,
@@ -159,6 +163,14 @@ export function materialRoutes(db: Database, files: MaterialFiles) {
     res.status(204).end();
   });
   router.get(
+    "/admin/material-queue",
+    authenticate(db, true),
+    requireAdmin,
+    async (req, res) => {
+      res.json(await materialQueue(db, materialQueueSchema.parse(req.query)));
+    },
+  );
+  router.get(
     "/admin/materials",
     authenticate(db, true),
     requireAdmin,
@@ -168,20 +180,11 @@ export function materialRoutes(db: Database, files: MaterialFiles) {
           status: { in: ["PENDING", "NEEDS_REVIEW"] },
           post: { status: { in: ["PENDING", "PUBLISHED"] } },
         },
-        include: { post: { include: { subject: true } } },
-        orderBy: { createdAt: "asc" },
+        include: materialReviewInclude,
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         take: 100,
       });
-      res.json(
-        items.map((item) => ({
-          ...ownMaterial(item),
-          postId: item.postId,
-          postTitle: item.post.title,
-          subjectName: item.post.subject.name,
-          postBody: item.post.body,
-          postOccurrenceLabel: formatOccurrence(publicOccurrence(item.post)),
-        })),
-      );
+      res.json(items.map(materialReviewDto));
     },
   );
   router.post(
