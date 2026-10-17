@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import {
-  privatePaginationSchema,
+  notificationQuerySchema,
+  notificationParams,
   privatePageParams,
   type PrivatePagination,
   type Notification,
@@ -12,13 +13,14 @@ import { useResource } from "../lib/resource";
 import { Feedback, PageHeading } from "../components/ui";
 import { Pagination } from "../components/Pagination";
 import { NeedLogin } from "./Account";
+import { ReviewNotifications } from "../components/ReviewNotifications";
 
 export function Notifications() {
   const { user } = useSession();
   const [params, setParams] = useSearchParams();
-  const query = privatePaginationSchema.safeParse(
+  const query = notificationQuerySchema.safeParse(
     Object.fromEntries(
-      ["page", "limit"].map((key) => {
+      ["page", "limit", "type"].map((key) => {
         const values = params.getAll(key);
         return [key, values.length > 1 ? values : values[0]];
       }),
@@ -35,12 +37,44 @@ export function Notifications() {
         </button>
       </>
     );
+  const selected = query.data;
+  const navigate = (value: PrivatePagination) =>
+    setParams(notificationParams({ ...value, type: selected.type }));
   return (
-    <NotificationList
-      key={`${user.id}:${privatePageParams(query.data)}`}
-      query={query.data}
-      navigate={(value) => setParams(privatePageParams(value))}
-    />
+    <>
+      <PageHeading
+        eyebrow="关注变化，了解审核结果"
+        title="后续追踪"
+        description="公开进展与本人审核结果分开查看。审核结果仅本人可见。"
+      />
+      <div className="follow-tabs" role="group" aria-label="通知类型">
+        {(["PUBLIC", "REVIEW"] as const).map((type) => (
+          <button
+            key={type}
+            className={`button ${selected.type === type ? "primary" : "secondary"}`}
+            aria-pressed={selected.type === type}
+            onClick={() =>
+              setParams(notificationParams({ ...selected, type, page: 1 }))
+            }
+          >
+            {type === "PUBLIC" ? "公开进展" : "我的审核"}
+          </button>
+        ))}
+      </div>
+      {selected.type === "REVIEW" ? (
+        <ReviewNotifications
+          key={`${user.id}:${privatePageParams(selected)}`}
+          query={selected}
+          navigate={navigate}
+        />
+      ) : (
+        <NotificationList
+          key={`${user.id}:${privatePageParams(selected)}`}
+          query={selected}
+          navigate={navigate}
+        />
+      )}
+    </>
   );
 }
 function NotificationList({
@@ -76,11 +110,6 @@ function NotificationList({
   }
   return (
     <>
-      <PageHeading
-        eyebrow="持续关注，不错过变化"
-        title="后续追踪"
-        description="你关注的帖子或对象有新公开经历和重要进展时，会在这里告诉你。"
-      />
       <div className="follow-tabs">
         <Link className="back-link" to="/following">
           管理我的关注

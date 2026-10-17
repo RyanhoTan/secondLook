@@ -1,4 +1,5 @@
 import { notifyFollowers } from "./notifications.js";
+import { notifyReviewResult } from "./review-notifications.js";
 import type { z } from "zod";
 import type {
   materialSchema,
@@ -249,7 +250,7 @@ export async function reviewMaterial(
       });
       if (assessment.count !== 1)
         throw new HttpError(409, "版本审核记录已变化，请刷新后重试");
-      await tx.auditLog.create({
+      const audit = await tx.auditLog.create({
         data: {
           actorId,
           targetId: id,
@@ -263,6 +264,17 @@ export async function reviewMaterial(
         },
       });
       await updateMaterialEvidence(tx, item.postId);
+      await notifyReviewResult(tx, {
+        auditId: audit.id,
+        userId: item.uploaderId,
+        postId: item.postId,
+        targetId: id,
+        kind: "MATERIAL",
+        version: data.baseVersion,
+        decision: data.action,
+        title: item.source,
+        reason: data.reason,
+      });
       if (data.action === "APPROVE" && item.visibility === "PUBLIC") {
         const post = await tx.post.findUniqueOrThrow({
           where: { id: item.postId },

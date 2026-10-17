@@ -16,6 +16,7 @@ model User {
   follows Follow[]
   subjectFollows SubjectFollow[]
   notifications Notification[]
+  reviewNotifications ReviewNotification[]
   materials Material[]
   drafts PostDraft[]
 }
@@ -66,6 +67,7 @@ model Post {
   events TimelineEvent[]
   materials Material[]
   draft PostDraft?
+  reviewNotifications ReviewNotification[]
   @@index([status,publishedAt])
   @@index([status,occurredOn])
   @@index([status,occurredUntil])
@@ -85,7 +87,7 @@ model PostDraft {
   authorId String
   author User @relation(fields:[authorId],references:[id])
   subjectId String?
-  subject Subject? @relation(fields:[subjectId],references:[id])
+  subject Subject? @relation(fields:[subjectId],references:[id],onDelete:Restrict)
   title String
   body String
   occurredOn String
@@ -96,7 +98,7 @@ model PostDraft {
   version Int @default(1)
   mutationKey String
   postId String? @unique
-  post Post? @relation(fields:[postId],references:[id])
+  post Post? @relation(fields:[postId],references:[id],onDelete:Restrict)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([authorId,updatedAt])
@@ -220,4 +222,23 @@ model AuditLog {
   action String
   reason String
   createdAt DateTime @default(now())
+  reviewNotification ReviewNotification?
+}
+model ReviewNotification {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  postId String
+  post Post @relation(fields:[postId],references:[id],onDelete:Cascade)
+  auditId String @unique
+  audit AuditLog @relation(fields:[auditId],references:[id],onDelete:Cascade)
+  kind String
+  targetId String
+  version Int
+  decision String
+  title String
+  reason String
+  read Boolean @default(false)
+  createdAt DateTime @default(now())
+  @@index([userId,createdAt,id])
 }

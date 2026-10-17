@@ -394,6 +394,9 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 24px;
 }
+.notification-list article {
+  overflow-wrap: anywhere;
+}
 .review-search {
   display: flex;
   flex-wrap: wrap;

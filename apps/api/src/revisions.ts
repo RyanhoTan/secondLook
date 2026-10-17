@@ -1,4 +1,5 @@
 import { notifyFollowers } from "./notifications.js";
+import { notifyReviewResult } from "./review-notifications.js";
 import {
   type revisionSchema,
   occurrenceBounds,
@@ -136,8 +137,19 @@ export async function reviewRevision(
       },
     });
     if (changed.count !== 1) throw new HttpError(409, "该修改已处理");
-    await tx.auditLog.create({
+    const audit = await tx.auditLog.create({
       data: { actorId, targetId: id, action: `REVISION_${action}`, reason },
+    });
+    await notifyReviewResult(tx, {
+      auditId: audit.id,
+      userId: revision.post.authorId,
+      postId: revision.postId,
+      targetId: id,
+      kind: "REVISION",
+      version: revision.baseVersion,
+      decision: action,
+      title: revision.title,
+      reason,
     });
     if (!approved) return;
     const postChanged = await tx.post.updateMany({

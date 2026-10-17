@@ -42,6 +42,7 @@ let token: string,
   authorId: string,
   postId: string;
 let publicId: string, privateId: string, withdrawnId: string, expected: unknown;
+let expectedReviewNotices: unknown;
 let original: Buffer;
 const auth = (value: string) => ({ Authorization: `Bearer ${value}` });
 function migrate(path: string) {
@@ -181,6 +182,20 @@ beforeAll(async () => {
   expected = (
     await request(app).get(`/api/v1/posts/${postId}`).set(auth(reader))
   ).body;
+  const notices = (
+    await request(app).get("/api/v1/me/review-notifications").set(auth(token))
+  ).body;
+  expect(notices.total).toBeGreaterThan(0);
+  expect(
+    (
+      await request(app)
+        .patch(`/api/v1/review-notifications/${notices.items[0].id}/read`)
+        .set(auth(token))
+    ).status,
+  ).toBe(204);
+  expectedReviewNotices = (
+    await request(app).get("/api/v1/me/review-notifications").set(auth(token))
+  ).body;
   await files.save(Buffer.from("orphan must not be included"));
   await db.$disconnect();
   await createBackup(source, uploads, snapshot);
@@ -238,6 +253,20 @@ it("restores accounts, sessions, public versions, drafts, notifications and mate
           .set(auth(reader))
       ).body.length,
     ).toBeGreaterThan(0);
+    expect(
+      (
+        await request(restoredApp)
+          .get("/api/v1/me/review-notifications")
+          .set(auth(token))
+      ).body,
+    ).toEqual(expectedReviewNotices);
+    expect(
+      (
+        await request(restoredApp)
+          .get("/api/v1/me/review-notifications")
+          .set(auth(reader))
+      ).body.total,
+    ).toBe(0);
     expect(
       (
         await request(restoredApp)

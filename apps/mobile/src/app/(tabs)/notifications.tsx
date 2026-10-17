@@ -3,11 +3,14 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import {
   privatePaginationSchema,
+  notificationQuerySchema,
   privatePageParams,
   type PrivatePagination,
   type Page,
   type Notification,
 } from "@secondlook/contracts";
+import { ReviewNotifications } from "../../components/ReviewNotifications";
+import { SegmentedControl } from "../../components/SegmentedControl";
 import { Pagination } from "../../components/Pagination";
 import { useApp } from "../../lib/context";
 import { useResource } from "../../lib/resource";
@@ -23,23 +26,53 @@ function navigate(query: PrivatePagination) {
 }
 export default function Notifications() {
   const { user } = useApp();
-  const query = privatePaginationSchema.safeParse(useLocalSearchParams());
+  const query = notificationQuerySchema.safeParse(useLocalSearchParams());
   if (!user) return <LoginGate />;
   if (!query.success)
     return (
       <Screen>
         <Heading title="后续追踪" />
         <Message error="通知分页条件无效，请清除后重试。" />
-        <Button onPress={() => navigate(privatePaginationSchema.parse({}))}>
+        <Button
+          onPress={() =>
+            router.setParams({
+              ...privatePaginationSchema.parse({}),
+              type: "PUBLIC",
+            })
+          }
+        >
           清除无效条件
         </Button>
       </Screen>
     );
   return (
-    <List
-      key={`${user.id}:${privatePageParams(query.data)}`}
-      query={query.data}
-    />
+    <Screen>
+      <Heading
+        eyebrow="关注变化，了解审核结果"
+        title="后续追踪"
+        description="公开进展与本人审核结果分开查看。审核结果仅本人可见。"
+      />
+      <SegmentedControl
+        options={[
+          { value: "PUBLIC", label: "公开进展" },
+          { value: "REVIEW", label: "我的审核" },
+        ]}
+        value={query.data.type}
+        onChange={(type) => router.setParams({ type, page: "1" })}
+      />
+      {query.data.type === "REVIEW" ? (
+        <ReviewNotifications
+          key={`${user.id}:${privatePageParams(query.data)}`}
+          query={query.data}
+          navigate={navigate}
+        />
+      ) : (
+        <List
+          key={`${user.id}:${privatePageParams(query.data)}`}
+          query={query.data}
+        />
+      )}
+    </Screen>
   );
 }
 function List({ query }: { query: PrivatePagination }) {
@@ -68,12 +101,7 @@ function List({ query }: { query: PrivatePagination }) {
     }
   }
   return (
-    <Screen>
-      <Heading
-        eyebrow="持续关注，不错过变化"
-        title="后续追踪"
-        description="你关注的帖子或对象有新公开经历和重要进展时，会在这里告诉你。"
-      />
+    <>
       {error && <Message error={error} />}
       <Button secondary onPress={() => router.push("/following")}>
         管理我的关注
@@ -182,6 +210,6 @@ function List({ query }: { query: PrivatePagination }) {
           onChange={(page) => navigate({ ...query, page })}
         />
       )}
-    </Screen>
+    </>
   );
 }

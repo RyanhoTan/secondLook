@@ -389,6 +389,34 @@ export type Notification = {
   read: boolean;
   createdAt: string;
 };
+export const notificationQuerySchema = privatePaginationSchema.extend({
+  type: z.enum(["PUBLIC", "REVIEW"]).default("PUBLIC"),
+});
+export type NotificationQuery = z.infer<typeof notificationQuerySchema>;
+export function notificationParams(query: NotificationQuery) {
+  const params = privatePageParams(query);
+  params.set("type", query.type);
+  return params;
+}
+export const reviewNotificationKinds = {
+  POST: "亲历投稿",
+  UPDATE: "后续进展",
+  REVISION: "原文修订",
+  MATERIAL: "图片材料",
+} as const;
+export type ReviewNotification = {
+  id: string;
+  postId: string;
+  targetId: string;
+  kind: keyof typeof reviewNotificationKinds;
+  version: number;
+  decision: "APPROVE" | "REJECT";
+  title: string;
+  reason: string;
+  read: boolean;
+  createdAt: string;
+  postAvailable: boolean;
+};
 export type Review = {
   issueTypes?: IssueType[];
   id: string;

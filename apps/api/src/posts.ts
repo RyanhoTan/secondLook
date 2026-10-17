@@ -1,4 +1,5 @@
 import { notifyFollowers } from "./notifications.js";
+import { notifyReviewResult } from "./review-notifications.js";
 import {
   type Category,
   type EvidenceLevel,
@@ -194,9 +195,39 @@ export async function reviewItem(
             },
           });
     if (changed.count !== 1) throw new HttpError(409, "该记录已处理或不可审核");
-    await tx.auditLog.create({
+    const audit = await tx.auditLog.create({
       data: { actorId, targetId: id, action: `${kind}_${action}`, reason },
     });
+    if (kind === "POST") {
+      const target = await tx.post.findUniqueOrThrow({ where: { id } });
+      await notifyReviewResult(tx, {
+        auditId: audit.id,
+        userId: target.authorId,
+        postId: id,
+        targetId: id,
+        kind,
+        version: 1,
+        decision: action,
+        title: target.title,
+        reason,
+      });
+    } else {
+      const target = await tx.progressUpdate.findUniqueOrThrow({
+        where: { id },
+        include: { post: true },
+      });
+      await notifyReviewResult(tx, {
+        auditId: audit.id,
+        userId: target.post.authorId,
+        postId: target.postId,
+        targetId: id,
+        kind,
+        version: target.post.currentVersion,
+        decision: action,
+        title: target.title,
+        reason,
+      });
+    }
     if (action === "REJECT") return;
     if (kind === "POST") {
       const post = await tx.post.findUniqueOrThrow({
